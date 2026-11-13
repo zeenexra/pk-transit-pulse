@@ -561,7 +561,7 @@ function roadsVisible(v) { if (map.getLayer("roads")) map.setLayoutProperty("roa
 let roadsCache = {};
 async function loadRoads(key) {
   try {
-    const r = roadsCache[key] || (roadsCache[key] = await fetch(`data/${key}-roads.json`).then((x) => x.json()));
+    const r = roadsCache[key] || (roadsCache[key] = await fetch(`${key}-roads.json`).then((x) => x.json()));
     if (cityKey !== key) return;
     // one MultiLineString per road class keeps the map light even for Karachi's full street grid
     const byClass = {};
@@ -1225,7 +1225,7 @@ async function openCity(key) {
   map.flyTo({ center: meta.center, zoom: 10.5, duration: 1400 });
   $("loading").classList.toggle("hidden", !!cache[key]);
   let d;
-  try { d = cache[key] || (cache[key] = await fetch(`data/${key}.json`).then((r) => r.json())); }
+  try { d = cache[key] || (cache[key] = await fetch(`${key}.json`).then((r) => r.json())); }
   catch (e) { $("loading").textContent = "Could not load this city."; return; }
   if (seq !== loadSeq) return;
   D = d; cityKey = key; chartBase = null; routeQuery = "";
@@ -1266,8 +1266,8 @@ addEventListener("resize", () => { resize(); setCredit(); });
 map.on("load", async () => {
   resize();
   setCredit();
-  const [cities, pk] = await Promise.all([fetch("data/cities.json").then((r) => r.json()),
-    fetch("data/pakistan.json").then((r) => r.json()).catch(() => null)]);
+  const [cities, pk] = await Promise.all([fetch("cities.json").then((r) => r.json()),
+    fetch("pakistan.json").then((r) => r.json()).catch(() => null)]);
   CITIES = cities;
   if (pk) map.getSource("pk").setData(pk);
   addMarkers(); initControls(); initSearch(); applyLang();
