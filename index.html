@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pakistan Transit Pulse</title>
+<meta name="description" content="Every modelled bus, BRT and metro run across a full day in Pakistan's cities. Pick a city, scrub the clock and watch it move.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0d0c; --ink: #f1f3f2; --dim: #98a29d; --panel: rgba(12, 15, 14, 0.84);
+    --line: rgba(255, 255, 255, 0.12); --accent: #22D07A; --accent2: #0E7A47; --foot: 58px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font-family: Inter, "Helvetica Neue", Arial, sans-serif; overflow: hidden; }
+  body.ur .t { font-family: "Noto Nastaliq Urdu", Inter, serif; }
+  #map { position: absolute; inset: 0 0 var(--foot) 0; }
+  #fx { position: absolute; left: 0; top: 0; pointer-events: none; }
+
+  /* minimal map styles (replaces the MapLibre stylesheet) */
+  .maplibregl-map { position: relative; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+  .maplibregl-canvas { position: absolute; left: 0; top: 0; }
+  .maplibregl-canvas-container.maplibregl-interactive { cursor: grab; }
+  .maplibregl-canvas-container.maplibregl-interactive:active { cursor: grabbing; }
+  .maplibregl-marker { position: absolute; left: 0; top: 0; will-change: transform; }
+
+  /* ---------- header */
+  #head { position: absolute; top: 16px; left: 16px; pointer-events: none;
+    text-shadow: 0 1px 12px rgba(0,0,0,0.95); max-width: min(520px, calc(100% - 32px)); z-index: 3; }
+  #head h1 { margin: 0; font-size: clamp(26px, 4vw, 44px); font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; }
+  #head h1 .flag { color: var(--accent); }
+  body.ur #head h1, body.ur #head .sub { font-family: "Noto Nastaliq Urdu", Inter, serif; line-height: 1.9; }
+  #head .sub { margin-top: 4px; font-size: clamp(13px, 1.5vw, 16px); color: var(--dim); }
+  #clock { margin-top: 8px; font-size: clamp(30px, 4vw, 44px); font-weight: 500; font-variant-numeric: tabular-nums; }
+  #clock small { font-size: 14px; color: var(--dim); font-weight: 400; margin-left: 6px; }
+  #count { font-size: 14px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  #count b { color: var(--accent); font-weight: 600; }
+  .row-btns { display: flex; gap: 6px; margin-top: 12px; pointer-events: auto; flex-wrap: wrap; }
+  #search { position: relative; pointer-events: auto; margin-top: 12px; width: min(300px, 100%); text-shadow: none; }
+  input[type=search], input[type=text], input[type=password] { width: 100%; font: inherit; font-size: 14px; color: var(--ink);
+    background: rgba(255,255,255,0.05); border: 1px solid var(--line); border-radius: 9px; padding: 8px 11px; }
+  #q { background: var(--panel); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); font-size: 15px; }
+  input:focus { outline: none; border-color: var(--accent); }
+  #hits { position: absolute; left: 0; right: 0; top: calc(100% + 4px); background: #121514;
+    border: 1px solid var(--line); border-radius: 10px; overflow: hidden; z-index: 6; max-height: 50vh; overflow-y: auto; }
+  #hits div { padding: 9px 12px; font-size: 14px; cursor: pointer; display: flex; justify-content: space-between; gap: 10px; }
+  #hits div span { color: var(--dim); font-size: 12px; }
+  #hits div:hover, #hits div.sel { background: rgba(255,255,255,0.08); }
+
+  button { font: inherit; font-size: 13px; color: var(--ink); background: var(--panel); border: 1px solid var(--line);
+    border-radius: 9px; padding: 7px 11px; cursor: pointer; text-shadow: none; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  button:hover { border-color: rgba(255,255,255,0.35); }
+  button.on { background: rgba(34,208,122,0.18); border-color: var(--accent); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button .k { color: var(--dim); font-size: 11px; margin-left: 4px; }
+  button .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-left: 6px; vertical-align: middle; }
+
+  /* ---------- player */
+  #ctl { position: absolute; left: 16px; right: 16px; bottom: calc(var(--foot) + 12px); display: flex; flex-direction: column;
+    gap: 8px; pointer-events: none; align-items: flex-start; z-index: 3; }
+  .bar { pointer-events: auto; background: var(--panel); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; width: 100%; max-width: 780px; }
+  .bar .top { display: flex; align-items: center; gap: 12px; }
+  #play { width: 44px; height: 38px; padding: 0; font-size: 16px; flex: none; background: transparent; }
+  #slider { flex: 1; min-width: 0; accent-color: var(--accent); height: 28px; }
+  .speeds { display: flex; gap: 4px; flex: none; }
+  .speeds button { padding: 6px 8px; font-size: 12px; background: transparent; }
+  #chart { display: block; width: 100%; height: 54px; margin-top: 6px; cursor: pointer; }
+  #note { pointer-events: auto; font-size: 12px; color: var(--dim); line-height: 1.45;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
+  .linkish { color: var(--accent); cursor: pointer; text-decoration: underline; background: none; border: 0; padding: 0; font-size: inherit; backdrop-filter: none; }
+
+  /* ---------- legend (live counts) */
+  #legend { position: absolute; right: 16px; top: 16px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 10px 12px; font-size: 13px; min-width: 200px; z-index: 3;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  #legend .title { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; display: flex; justify-content: space-between; }
+  #legend label { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 3px 0; user-select: none; }
+  #legend label.off { opacity: 0.35; }
+  #legend i, .chip i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; box-shadow: 0 0 7px currentColor; flex: none; }
+  #legend .n { margin-left: auto; color: var(--ink); font-variant-numeric: tabular-nums; font-size: 12px; padding-left: 12px; }
+
+  /* ---------- side panel (filters / map / display) */
+  #panel { position: absolute; right: 16px; top: 16px; width: 340px; max-height: calc(100% - var(--foot) - 32px);
+    display: flex; flex-direction: column; z-index: 8; background: rgba(12,15,14,0.94); border: 1px solid var(--line);
+    border-radius: 14px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+  #panel .tabs { display: flex; gap: 4px; padding: 10px 10px 0; align-items: center; }
+  #panel .tabs button { flex: 1; background: transparent; }
+  #panel .tabs .x { flex: none; border: 0; color: var(--dim); }
+  #panel .body { overflow-y: auto; padding: 4px 14px 14px; }
+  #panel h4 { margin: 14px 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dim); font-weight: 600;
+    display: flex; justify-content: space-between; align-items: center; }
+  #panel h4 .linkish { text-transform: none; letter-spacing: 0; font-weight: 400; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; font-size: 12px; border-radius: 99px; background: transparent; }
+  .chip.off { opacity: 0.4; }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+  .seg button { flex: 1; border: 0; border-radius: 0; background: transparent; padding: 6px 4px; font-size: 12px; backdrop-filter: none; }
+  .seg button.on { background: rgba(34,208,122,0.2); }
+  .list { max-height: 210px; overflow-y: auto; border: 1px solid var(--line); border-radius: 9px; }
+  .list label { display: flex; gap: 8px; align-items: center; padding: 6px 9px; font-size: 12.5px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .list label:hover { background: rgba(255,255,255,0.05); }
+  .list label .n { margin-left: auto; color: var(--dim); font-size: 11px; white-space: nowrap; }
+  .list label .rid { font-weight: 600; min-width: 50px; flex: none; padding-right: 6px; }
+  .list label .nm { color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .list input { accent-color: var(--accent); }
+  .muted { color: var(--dim); font-size: 12px; line-height: 1.5; }
+  .bm { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .bm button { text-align: left; padding: 8px 10px; background: transparent; }
+  .bm button small { display: block; color: var(--dim); font-size: 11px; margin-top: 2px; }
+  .bm .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; border: 1px solid rgba(255,255,255,0.2); }
+  #bmMsg { margin-top: 8px; }
+  #bmMsg.err { color: #ff9b8a; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .switch { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: 13px; cursor: pointer; }
+  .switch input { accent-color: var(--accent); width: 16px; height: 16px; }
+  input[type=range] { accent-color: var(--accent); }
+
+  /* ---------- vehicle card */
+  #card { position: absolute; right: 16px; bottom: calc(var(--foot) + 12px); width: min(340px, calc(100% - 32px)); z-index: 5;
+    background: rgba(12,15,14,0.94); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; font-size: 13px; line-height: 1.5;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  #card .rid { font-size: 22px; font-weight: 700; }
+  #card .nm { font-size: 14px; margin: 2px 0 4px; }
+  #card .ur-nm { font-family: "Noto Nastaliq Urdu", serif; direction: rtl; color: var(--dim); font-size: 14px; line-height: 2; }
+  #card dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 6px 0 10px; }
+  #card dt { color: var(--dim); } #card dd { margin: 0; }
+  #card .x { position: absolute; top: 8px; right: 8px; border: 0; background: none; color: var(--dim); }
+  #card .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 99px; border: 1px solid var(--line); }
+  .badge.pub { color: var(--accent); border-color: var(--accent2); }
+  .badge.ass { color: #E9B949; border-color: #6b5520; }
+
+  /* ---------- landing markers */
+  .city { display: flex; align-items: center; gap: 8px; cursor: pointer; transform: translateX(7px); }
+  .city .pin { width: 13px; height: 13px; border-radius: 50%; background: var(--accent); flex: none;
+    box-shadow: 0 0 0 4px rgba(34,208,122,0.2), 0 0 18px rgba(34,208,122,0.8); animation: pulse 2.4s ease-in-out infinite; }
+  .city .lbl { font-size: 14px; font-weight: 500; color: var(--ink); white-space: nowrap; text-shadow: 0 1px 6px #000, 0 0 2px #000; }
+  .city .lbl span { display: block; font-size: 11px; color: var(--dim); font-weight: 400; }
+  body.ur .city .lbl { font-family: "Noto Nastaliq Urdu", serif; }
+  .city:hover .pin { background: #fff; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 9px rgba(34,208,122,0.05), 0 0 26px rgba(34,208,122,0.9); } }
+
+  /* ---------- footer */
+  #foot { position: absolute; left: 0; right: 0; bottom: 0; height: var(--foot); z-index: 9; display: flex; align-items: center; gap: 14px;
+    padding: 0 16px; background: #070908; border-top: 1px solid var(--line); }
+  #foot .by { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
+  #foot .logo { background: #fff; border-radius: 8px; padding: 4px 8px; display: flex; align-items: center; height: 40px; }
+  #foot .logo img { height: 32px; width: auto; display: block; }
+  #foot .credit { margin-left: auto; font-size: 11px; color: #7d8782; text-align: right; line-height: 1.4; }
+  #foot .credit a { color: #9aa49f; }
+  #gmark { position: absolute; left: 12px; bottom: calc(var(--foot) + 8px); z-index: 2; font: 600 15px/1 Arial, sans-serif; color: #fff;
+    text-shadow: 0 0 3px #000; letter-spacing: -0.02em; pointer-events: none; }
+
+  /* ---------- overlays */
+  #about { position: absolute; inset: 0; z-index: 20; background: rgba(0,0,0,0.6); display: grid; place-items: center; padding: 16px; }
+  #about .box { background: #111413; border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; max-width: 640px;
+    max-height: 86vh; overflow-y: auto; font-size: 14px; line-height: 1.6; }
+  #about h2 { margin: 0 0 8px; font-size: 20px; }
+  #about h3 { margin: 16px 0 4px; font-size: 14px; color: var(--accent); }
+  #about a { color: var(--accent); }
+  #loading { position: absolute; inset: 0 0 var(--foot) 0; display: grid; place-items: center; font-size: 15px;
+    color: var(--dim); background: rgba(11,13,12,0.55); z-index: 7; pointer-events: none; }
+  #toast { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); z-index: 30; background: #1b2420; border: 1px solid var(--accent2);
+    color: var(--ink); font-size: 13px; padding: 8px 14px; border-radius: 99px; transition: opacity .3s; pointer-events: none; }
+  .hidden { display: none !important; }
+
+  @media (max-width: 760px) {
+    :root { --foot: 50px; }
+    #head { left: 12px; top: 12px; }
+    #legend { top: auto; right: 10px; bottom: calc(var(--foot) + 158px); font-size: 12px; padding: 7px 9px; min-width: 0; }
+    #legend .title { display: none; }
+    #ctl { left: 10px; right: 10px; bottom: calc(var(--foot) + 8px); }
+    .speeds button { padding: 5px 6px; }
+    #note { display: none; }
+    #card { bottom: calc(var(--foot) + 160px); right: 10px; }
+    #panel { left: 8px; right: 8px; width: auto; top: auto; bottom: calc(var(--foot) + 8px); max-height: 66vh; }
+    #foot { gap: 8px; padding: 0 10px; }
+    #foot .by { display: none; }
+    #foot .logo { height: 34px; padding: 3px 6px; }
+    #foot .logo img { height: 26px; }
+    #foot .credit { font-size: 9.5px; max-width: 42%; }
+    button .k { display: none; }
+    .row-btns button { padding: 6px 9px; }
+  }
+  body.embed #note { display: none; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<canvas id="fx"></canvas>
+
+<div id="head">
+  <h1 id="title"></h1>
+  <div class="sub" id="subtitle"></div>
+  <div id="clock" class="hidden"></div>
+  <div id="count"></div>
+  <div id="search"><input id="q" type="search" autocomplete="off"><div id="hits" class="hidden"></div></div>
+  <div class="row-btns">
+    <button id="back" class="hidden"></button>
+    <button id="btnFilters" class="hidden"></button>
+    <button id="btnMap"></button>
+    <button id="lang" aria-label="Language">اردو</button>
+    <button id="btnShare"></button>
+    <button id="aboutBtn"></button>
+  </div>
+</div>
+
+<div id="legend" class="hidden"></div>
+<div id="panel" class="hidden"></div>
+<div id="card" class="hidden"></div>
+<div id="gmark" class="hidden">Google</div>
+
+<div id="ctl">
+  <div class="bar hidden" id="player">
+    <div class="top">
+      <button id="play" aria-label="Play or pause">❚❚</button>
+      <input id="slider" type="range" min="0" max="1" step="1" aria-label="Time of day">
+      <div class="speeds" id="speeds"></div>
+    </div>
+    <canvas id="chart" aria-label="Vehicles running through the day"></canvas>
+  </div>
+  <div id="note"></div>
+</div>
+
+<footer id="foot">
+  <span class="by t" id="byLbl">Developed by</span>
+  <span class="logo" title="Sheher Saaz — Creating Places For People"><img alt="Sheher Saaz" src="data:image/png;base64,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/YHLBQSxZlBDQwOIrsAPWB6Hfnbs2HHPnj3e3t66R925c2fwxnCNy7DQUqn06tWrBEFAInig3Nzc4uJid3d3/K4CPjx//jy0pr6mEC6jUql09+Rv1ecftr/TtMDd01Okp4OioAA7KHB4sN4wh1iWYV9tmONGmYwbN65Pnz4HDx4E1ye8lGADCwSCx48fv/vuu99//31eXp6NjY22QAqEUP/+/V1cXPbt25eRkYHDyuGCmTNnenl5gYe0devW4eHhDx8+XL58Odjv4FlCoTAxMXHnzp08uIEJBO0Pijk1+/xMUFCQm5vbiRMnoFoVDBNi7leuXHnr1i19kI5bggv+6l5f8CMvW7asuroaznsQBCEUChsaGubMmcNN2hEUFGRra3v06NHc3FwwG8FPLMuOHDnSx8cnJSUFfNYikWjDhg2PHz/G9erhw+jRo729vc+dOwcRPx07dgRzPjh2EUJjxoyB0s5NZkJXL02vUqns7OyioqJqa2s3b96MS6mBTn316tVdu3ZZWFhAaa7mrREu1sU1HOMaNwRBrF27FurR4FE3NjZGRka2a9cO7HQDBgxwcXE5efLk1atXgbVgiUmSXL16dUFBQUhICAhc8FN9fT1UFMIXC4XCrKysbdu2EQTxxhtvqHORr69v7969L1269Ndff/H4fPny5W3atAF/F/7yH0Y6kOwEHp5eYlNTHdXFuGosgF11VWXJs6cgmlBaWRa9DjCHeUgkEv3+++++vr4rV64cOHBgXFzc3bt3wRG2cePGXr16JSUl9ejRY9euXViHwgjFFQ8tLS1XrlxZX18fFRV19uxZKLJVUlIye/bs2NhYsVgcGhoKOLJs2TJLS8tvv/121qxZd+7caWhoePz48aZNm4YOHerv749bhosh7j8xMbG0tLS0tBTUW1wor0mnCnfb2NjYrFixgmGYiRMnrl279uHDhxKJpKio6LPPPlu6dCkII00kHNSjnCO3b0qlcsyYMSEhITdu3AgPD09MTKytra2rq7t48eKAAQMaGxudnJygvjDoX8uWLautrY2IiDhz5oxUKlUqlUVFRTExMWfOnAkKCgoLC4PyV4sXL753715UVNTVq1ch7ufOnTvvvPNOXFyct7d37969ocCzhYXF+fPn161bB8J7RUXFypUrlUplnz59dGC6tmqN8OJfvHixg4PDokWLli9fXl5erlKp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"></span>
+  <span class="logo" title="Nexra"><img alt="Nexra" src="data:image/png;base64,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"></span>
+  <div class="credit" id="credit"></div>
+</footer>
+
+<div id="loading" class="hidden"></div>
+<div id="toast" class="hidden"></div>
+<div id="about" class="hidden"><div class="box" id="aboutBox"></div></div>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>
+"use strict";
+// ================================================================== text (English / Urdu)
+const T = {
+  en: {
+    title: 'Pakistan Transit <span class="flag">Pulse</span>',
+    sub: "Every bus, BRT and metro run through a whole day. Pick a city.",
+    subCity: (p) => `Modelled weekday service · ${p}`,
+    search: "Search a city…", back: "← All cities", about: "About", lang: "اردو", share: "Share",
+    filters: "Filters", map: "Map", display: "Display",
+    running: (n, all) => n === all ? `<b>${n.toLocaleString("en")}</b> vehicles running` : `<b>${n.toLocaleString("en")}</b> of ${all.toLocaleString("en")} vehicles shown`,
+    cities: (n) => `${n} cities so far`, trips: "trips", loading: "Loading the network…",
+    liveNow: "Running now", none: "No city yet.",
+    note: 'Modelled from published frequencies and service hours, not live GPS. <button class="linkish" data-about>How it works</button>',
+    headway: "Every", hours: "Hours", fare: "Fare", length: "Length", system: "Service", min: "min",
+    pub: "published frequency", ass: "assumed frequency",
+    modes: "Modes", services: "Services", confidence: "Frequency data", all: "All", published: "Published", assumed: "Assumed",
+    routes: "Routes", findRoute: "Find a route number or place…", onlySel: (n) => `Showing only ${n} selected`, clear: "Clear",
+    reset: "Reset all filters", noRoutes: "No matching routes.",
+    basemap: "Background map", lines: "Route lines", trails: "Trails", glow: "Glow", size: "Vehicle size",
+    jump: "Jump to", morning: "Morning peak", midday: "Midday", evening: "Evening peak", night: "Night",
+    follow: "Follow", following: "Following", only: "Only this route", copied: "Link copied", copyFail: "Copy this link: ",
+    gkey: "Google Maps API key", save: "Use key", by: "Developed by",
+    stationsL: "Stations", lightsL: "Headlights at night", vstyle: "Vehicles", vAuto: "Auto", vDots: "Dots", vReal: "Real vehicles",
+    vHint: "Auto shows real buses, BRT and trains from street level (zoom 14+), glowing dots further out.", zoomHint: "Zoom in to see real buses, BRT and trains",
+    bmBlocked: "This page can't reach outside map servers (the Claude preview blocks them), so your key was never sent to Google. Online maps and Google dark work when the site runs on GitHub Pages, another web host, or locally.",
+    gNeedKey: "Paste a Google Maps Platform API key with the Map Tiles API enabled. It stays in this browser only.",
+    gFail: "Google answered but refused the key. Check that the Map Tiles API is enabled, billing is on, and the key's website restrictions include this site.",
+  },
+  ur: {
+    title: 'پاکستان ٹرانزٹ <span class="flag">پلس</span>',
+    sub: "پورے دن میں ہر بس، میٹرو بس اور میٹرو ٹرین کی آمدورفت۔ شہر منتخب کریں۔",
+    subCity: (p) => `ہفتے کے عام دن کی ماڈل شدہ سروس · ${p}`,
+    search: "شہر تلاش کریں…", back: "→ تمام شہر", about: "تعارف", lang: "English", share: "شیئر",
+    filters: "فلٹر", map: "نقشہ", display: "ڈسپلے",
+    running: (n, all) => n === all ? `<b>${n.toLocaleString("en")}</b> گاڑیاں رواں` : `<b>${n.toLocaleString("en")}</b> / ${all.toLocaleString("en")} گاڑیاں دکھائی گئیں`,
+    cities: (n) => `اب تک ${n} شہر`, trips: "ٹرپس", loading: "نیٹ ورک لوڈ ہو رہا ہے…",
+    liveNow: "اس وقت رواں", none: "یہ شہر ابھی شامل نہیں۔",
+    note: 'یہ شائع شدہ فریکوئنسی اور اوقات سے بنایا گیا ماڈل ہے، لائیو جی پی ایس نہیں۔ <button class="linkish" data-about>تفصیل</button>',
+    headway: "ہر", hours: "اوقات", fare: "کرایہ", length: "لمبائی", system: "سروس", min: "منٹ",
+    pub: "شائع شدہ فریکوئنسی", ass: "اندازاً فریکوئنسی",
+    modes: "ذرائع", services: "سروسز", confidence: "فریکوئنسی ڈیٹا", all: "سب", published: "شائع شدہ", assumed: "اندازاً",
+    routes: "روٹس", findRoute: "روٹ نمبر یا جگہ تلاش کریں…", onlySel: (n) => `صرف ${n} منتخب روٹ`, clear: "صاف کریں",
+    reset: "تمام فلٹر ختم کریں", noRoutes: "کوئی روٹ نہیں ملا۔",
+    basemap: "پس منظر نقشہ", lines: "روٹ لائنیں", trails: "دم", glow: "چمک", size: "گاڑی کا سائز",
+    jump: "وقت پر جائیں", morning: "صبح رش", midday: "دوپہر", evening: "شام رش", night: "رات",
+    follow: "پیچھا کریں", following: "پیچھا جاری", only: "صرف یہ روٹ", copied: "لنک کاپی ہو گیا", copyFail: "یہ لنک کاپی کریں: ",
+    gkey: "گوگل میپس API کی", save: "استعمال کریں", by: "تیار کردہ",
+    stationsL: "اسٹیشن", lightsL: "رات کو ہیڈلائٹس", vstyle: "گاڑیاں", vAuto: "خودکار", vDots: "نقطے", vReal: "اصل گاڑیاں",
+    vHint: "قریب زوم کرنے پر اصل بسیں، میٹرو بس اور ٹرینیں نظر آتی ہیں۔", zoomHint: "اصل بسیں اور ٹرینیں دیکھنے کے لیے زوم کریں",
+    bmBlocked: "یہ نقشہ یہاں لوڈ نہیں ہو سکتا (پری ویو بیرونی ٹائلز روکتا ہے)۔ GitHub Pages یا لوکل پر چلائیں۔",
+    gNeedKey: "Map Tiles API والی گوگل میپس پلیٹ فارم کی API کی درج کریں۔ یہ صرف اسی براؤزر میں رہتی ہے۔",
+    gFail: "گوگل نے یہ کی قبول نہیں کی۔ Map Tiles API، بلنگ اور ویب سائٹ کی پابندیاں چیک کریں۔",
+  },
+};
+const ABOUT = `
+<h2>About Pakistan Transit Pulse</h2>
+<p>An animated map of public transport across a full day in Pakistan's biggest cities. Each glowing dot is one bus, BRT bus or train, moving along its real road route.</p>
+<h3>Where the routes come from</h3>
+<p>Routes, stops, road-following route lines, frequencies and operating hours come from <a href="https://github.com/ShahzebSpeaks/pakistan-bus-routes" target="_blank" rel="noopener">Pakistan Bus Routes</a>, an open, source-cited dataset of Pakistan's city transit, routed along OpenStreetMap roads. Only routes marked operational or unverified are shown, and only those with a road-routed line, so every bus runs on a real road. Elevated metro lines are drawn station to station.</p>
+<h3>Why the movement is modelled</h3>
+<p>Pakistani city operators publish how often buses run and their service hours, not stop-by-stop timetables, and there is no official GTFS feed. So each day is built like this:</p>
+<ul>
+<li>Departures from both ends every headway, from first to last bus. Frequencies are thinner early, mid-day and late evening, and tightest in the 07:00–10:00 and 16:30–19:30 peaks.</li>
+<li>Run times come from route distance at a typical speed for each mode: metro 34 km/h, BRT 22, electric/feeder buses 16, city buses 15, wagons 14. Road traffic is 20–25% slower in peak hours. Each stop adds a short dwell.</li>
+<li>Routes with a <b>published frequency</b> use it. The rest use an <b>assumed frequency</b> for their mode. Use the Filters panel to show only one or the other.</li>
+</ul>
+<p>Vehicles speed up after each stop and slow down into the next, keep to the left of the road as in Pakistan, and turn with the road. Zoomed in, each mode is drawn at its real size: 18 m articulated BRT buses, 98 m five-car Orange Line trains, 12 m city, feeder, electric and pink buses, and 5.4 m Hiace-type wagons. After dark they run with headlights on.</p>
+<p>Treat it as a picture of how the network breathes through the day, not as live positions or an exact timetable.</p>
+<h3>Background map</h3>
+<p>"Black streets" is built into the page, so it works everywhere. Karachi has its full OpenStreetMap street network; the other cities show the real roads used by every route in the dataset. The online maps (CARTO, satellite, Google) load when the site runs on a normal web host.</p>
+<h3>Keyboard</h3>
+<p>Space play/pause · F filters · M map · Esc close</p>
+<h3>Credits & licence</h3>
+<p>Route data © Pakistan Bus Routes contributors, © OpenStreetMap contributors, under the <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">Open Database License</a>. This site's derived data is shared under the same licence. Background maps: © CARTO, © OpenStreetMap contributors; satellite © Esri and its partners; Google map © Google. Country outline: Natural Earth. Map engine: MapLibre GL JS.</p>
+<p>Developed by Sheher Saaz and Nexra.</p>
+<p><button id="aboutClose">Close</button></p>`;
+
+// ================================================================== config
+const SPEEDS = [[60, "½×"], [120, "1×"], [300, "2.5×"], [900, "7.5×"]]; // timetable seconds per real second
+const R = 6378137, TAU = 2 * Math.PI;
+const $ = (id) => document.getElementById(id);
+const WORLD = () => ({ center: [69.3, 30.2], zoom: innerWidth < 760 ? 4.1 : 4.9 });
+const ROUTE_CREDIT = 'Routes © <a href="https://github.com/ShahzebSpeaks/pakistan-bus-routes" target="_blank" rel="noopener">Pakistan Bus Routes</a> contributors, © OpenStreetMap contributors (ODbL)';
+const CARTO = (s) => [`https://a.basemaps.cartocdn.com/${s}/{z}/{x}/{y}@2x.png`, `https://b.basemaps.cartocdn.com/${s}/{z}/{x}/{y}@2x.png`, `https://c.basemaps.cartocdn.com/${s}/{z}/{x}/{y}@2x.png`];
+const BASEMAPS = {
+  streets:   { en: "Black streets", ur: "سیاہ سڑکیں", note: "Built in · works everywhere", sw: "#1f2623" },
+  none:      { en: "Transit only", ur: "صرف ٹرانزٹ", note: "Network as the map", sw: "#0b0d0c" },
+  black:     { en: "CARTO black", ur: "کارٹو سیاہ", note: "Online tiles, no labels", sw: "#111", tiles: CARTO("dark_nolabels"), credit: "© CARTO, © OpenStreetMap contributors", bright: 0.8 },
+  dark:      { en: "Dark + labels", ur: "ڈارک + نام", note: "Streets and place names", sw: "#262b29", tiles: CARTO("dark_all"), credit: "© CARTO, © OpenStreetMap contributors", bright: 1 },
+  light:     { en: "Light", ur: "لائٹ", note: "Pale streets", sw: "#e8e8e4", tiles: CARTO("light_all"), credit: "© CARTO, © OpenStreetMap contributors", bright: 1, light: true },
+  satellite: { en: "Satellite", ur: "سیٹلائٹ", note: "Esri World Imagery", sw: "#3d4a33", tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"], credit: "Imagery © Esri, Maxar, Earthstar Geographics", bright: 0.65, size: 256 },
+  google:    { en: "Google dark", ur: "گوگل ڈارک", note: "Needs your API key", sw: "#1d2420", google: true },
+};
+// Dark style for Google Map Tiles API roadmap tiles: near-black land, thin grey roads, quiet labels
+const GOOGLE_DARK = [
+  { elementType: "geometry", stylers: [{ color: "#0d100f" }] },
+  { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#6e7873" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#0d100f" }] },
+  { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#2a312d" }] },
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+  { featureType: "landscape.man_made", elementType: "geometry", stylers: [{ color: "#121614" }] },
+  { featureType: "road", elementType: "geometry.fill", stylers: [{ color: "#262c29" }] },
+  { featureType: "road", elementType: "geometry.stroke", stylers: [{ visibility: "off" }] },
+  { featureType: "road.highway", elementType: "geometry.fill", stylers: [{ color: "#353d39" }] },
+  { featureType: "road.local", elementType: "geometry.fill", stylers: [{ color: "#1a1f1d" }] },
+  { featureType: "road", elementType: "labels", stylers: [{ visibility: "off" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#050708" }] },
+];
+if (/[?&]embed=1/.test(location.search)) document.body.classList.add("embed");
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("ptp-" + k); return v === null ? d : v; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("ptp-" + k, v); } catch (e) {} },
+};
+let LANG = store.get("lang", "en");
+const t = () => T[LANG];
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// ================================================================== data
+let D = null, shapes, pats, profs, trips, tripEnd, tripStarts, patRoute, patMode, maxDur, cityKey = null, loadSeq = 0;
+let routeVis, patVis;
+const cache = {};
+const F = { modeOff: new Set(), sysOff: new Set(), conf: "all", only: new Set() }; // filters
+const V = { lines: true, trails: true, glow: true, size: 1, style: "auto", stations: true, lights: true };                         // display
+
+function decode(d) {
+  shapes = []; maxDur = 0;
+  const [ox, oy] = d.origin;
+  for (const flat of d.shapes) {
+    const n = flat.length / 2, x = new Float64Array(n), y = new Float64Array(n), cum = new Float64Array(n);
+    let ax = ox, ay = oy;
+    for (let i = 0; i < n; i++) {
+      ax += flat[2 * i]; ay += flat[2 * i + 1]; x[i] = ax; y[i] = ay;
+      if (i) cum[i] = cum[i - 1] + Math.hypot(x[i] - x[i - 1], y[i] - y[i - 1]);
+    }
+    shapes.push({ x, y, cum });
+  }
+  pats = d.patterns.map(([s, c, e, ds]) => ({ s, c, e, ds: Float64Array.from(ds) }));
+  for (const p of pats) { // stop distances were measured on the full-precision line; rescale onto the rounded one
+    const L = shapes[p.s].cum[shapes[p.s].cum.length - 1], last = p.ds[p.ds.length - 1] || 1;
+    const f = L / last; for (let i = 0; i < p.ds.length; i++) p.ds[i] *= f;
+  }
+  patRoute = Int32Array.from(pats.map((p) => d.shape_style[p.s][2]));
+  patMode = pats.map((p, i) => d.routes[patRoute[i]].mode);
+  profs = d.profiles.map((p) => Int32Array.from(p));
+  trips = Int32Array.from(d.trips);
+  const n = trips.length / 4;
+  tripEnd = new Int32Array(n); tripStarts = new Int32Array(n);
+  for (let i = 0; i < n; i++) {
+    const p = profs[trips[4 * i + 2]];
+    tripStarts[i] = trips[4 * i];
+    tripEnd[i] = trips[4 * i] + p[p.length - 1];
+    maxDur = Math.max(maxDur, p[p.length - 1]);
+  }
+  d.mscale = 1 / Math.cos(d.center[1] * Math.PI / 180);
+  const modeCol = {}; for (const [m, , , cols] of d.legend) modeCol[m] = cols[0];
+  d.stXY = (d.stations || []).map(([name, ur, ix, iy, m]) => ({ name, ur, x: d.origin[0] + ix, y: d.origin[1] + iy, col: modeCol[m] || "#22D07A" }));
+  routeVis = new Uint8Array(d.routes.length).fill(1);
+  patVis = new Uint8Array(pats.length).fill(1);
+}
+
+function bisect(a, v) { // last index i with a[i] <= v (0 if none)
+  let lo = 0, hi = a.length - 1;
+  while (lo < hi) { const m = (lo + hi + 1) >> 1; if (a[m] <= v) lo = m; else hi = m - 1; }
+  return lo;
+}
+
+// ---------- motion: time -> distance (with acceleration) -> position + heading on the road line
+const EASE_A = 0.2; // share of each stop-to-stop run spent speeding up, and again slowing down
+function ease(u) {
+  const a = EASE_A, v = 1 / (1 - a);
+  if (u < a) return v * u * u / (2 * a);
+  if (u > 1 - a) return 1 - v * (1 - u) * (1 - u) / (2 * a);
+  return v * (u - a / 2);
+}
+function distAt(pat, prof, rel) {
+  const i = bisect(prof, rel);
+  if (i >= prof.length - 1) return pat.ds[pat.ds.length - 1];
+  const span = prof[i + 1] - prof[i], dd = pat.ds[i + 1] - pat.ds[i];
+  return span > 0 && dd > 0 ? pat.ds[i] + dd * ease((rel - prof[i]) / span) : pat.ds[i];
+}
+function ptAt(sh, d, out, o) {
+  const c = sh.cum, last = c.length - 1;
+  let j, f;
+  if (d <= 0) { j = 0; f = 0; } else if (d >= c[last]) { j = last - 1; f = 1; }
+  else { j = Math.min(bisect(c, d), last - 1); f = (d - c[j]) / ((c[j + 1] - c[j]) || 1); }
+  out[o] = sh.x[j] + (sh.x[j + 1] - sh.x[j]) * f;
+  out[o + 1] = sh.y[j] + (sh.y[j + 1] - sh.y[j]) * f;
+}
+const HB = [0, 0, 0, 0];
+// out: [x, y, heading]; heading is the chord across +-hl metres, so vehicles turn smoothly at corners
+function pos(pat, prof, rel, out, hl) {
+  if (rel < 0 || rel > prof[prof.length - 1]) return false;
+  const sh = shapes[pat.s], d = distAt(pat, prof, rel), h = hl || 6;
+  ptAt(sh, d, out, 0);
+  ptAt(sh, d - h, HB, 0); ptAt(sh, d + h, HB, 2);
+  out[2] = Math.atan2(HB[3] - HB[1], HB[2] - HB[0]);
+  return true;
+}
+const toLL = (x, y) => [x / R * 360 / TAU, (2 * Math.atan(Math.exp(y / R)) - Math.PI / 2) * 180 / Math.PI];
+
+// ================================================================== filters
+function applyFilters(redraw = true) {
+  if (!D) return;
+  D.routes.forEach((r, i) => {
+    routeVis[i] = !F.modeOff.has(r.mode) && !F.sysOff.has(r.system) && (F.conf === "all" || F.conf === r.conf)
+      && (F.only.size === 0 || F.only.has(i)) ? 1 : 0;
+  });
+  for (let p = 0; p < pats.length; p++) patVis[p] = routeVis[patRoute[p]];
+  if (redraw) { setNetwork(); chartBase = null; setLegend(); if (panelTab) renderPanel(); }
+  $("btnFilters").innerHTML = `<span class="t">${t().filters}</span>${filtersActive() ? '<span class="dot"></span>' : ""}<span class="k">F</span>`;
+}
+const filtersActive = () => F.modeOff.size || F.sysOff.size || F.conf !== "all" || F.only.size;
+function resetFilters() { F.modeOff.clear(); F.sysOff.clear(); F.conf = "all"; F.only.clear(); applyFilters(); }
+
+// ================================================================== map
+const map = new maplibregl.Map({
+  container: "map",
+  style: {
+    version: 8,
+    sources: {
+      pk: { type: "geojson", data: { type: "FeatureCollection", features: [] } },
+      net: { type: "geojson", data: { type: "FeatureCollection", features: [] } },
+      roads: { type: "geojson", data: { type: "FeatureCollection", features: [] }, maxzoom: 13, buffer: 32, tolerance: 0.4 },
+    },
+    layers: [
+      { id: "bg", type: "background", paint: { "background-color": "#0b0d0c" } },
+      { id: "pk-fill", type: "fill", source: "pk", paint: { "fill-color": "#16201b", "fill-opacity": 0.9 } },
+      { id: "pk-line", type: "line", source: "pk", paint: { "line-color": "#2f4a3c", "line-width": 1.2 } },
+      { id: "roads", type: "line", source: "roads", layout: { "line-join": "miter", "line-cap": "butt", "line-miter-limit": 2 },
+        paint: {
+          "line-color": ["match", ["get", "c"], 0, "#4b5752", 1, "#3e4844", 2, "#353e3a", 3, "#2c3431", 4, "#1f2623", 5, "#323b37", "#2a302d"],
+          "line-width": ["interpolate", ["exponential", 1.6], ["zoom"],
+            9, ["match", ["get", "c"], 0, 1.4, 1, 1.1, 2, 0.9, 3, 0.6, 4, 0.25, 5, 0.8, 0.5],
+            13, ["match", ["get", "c"], 0, 4, 1, 3.2, 2, 2.6, 3, 2, 4, 1, 5, 2.4, 1],
+            17, ["match", ["get", "c"], 0, 26, 1, 21, 2, 17, 3, 13, 4, 8, 5, 15, 6]],
+        } },
+      { id: "net", type: "line", source: "net", layout: { "line-join": "round", "line-cap": "round" },
+        paint: {
+          "line-color": ["get", "col"],
+          "line-opacity": ["case", ["boolean", ["get", "off"], false], 0.04, ["==", ["get", "e"], 1], 0.55, ["get", "a"]],
+          "line-width": ["interpolate", ["linear"], ["zoom"], 9, ["case", ["==", ["get", "e"], 1], 2, 0.7],
+            14, ["case", ["==", ["get", "e"], 1], 5, 1.8]],
+        } },
+      { id: "hl", type: "line", source: "net", filter: ["==", ["get", "r"], -1],
+        layout: { "line-join": "round", "line-cap": "round" },
+        paint: { "line-color": "#ffffff", "line-opacity": 0.9, "line-width": ["interpolate", ["linear"], ["zoom"], 9, 2.5, 14, 6] } },
+    ],
+  },
+  center: WORLD().center, zoom: WORLD().zoom, minZoom: 3, maxZoom: 17,
+  dragRotate: false, pitchWithRotate: false, touchPitch: false, attributionControl: false,
+});
+map.touchZoomRotate.disableRotation();
+
+// ---------- background maps
+let bmKey = store.get("basemap2", "streets"), bmCredit = "", bmState = "";
+function clearBasemap() {
+  for (const id of ["base"]) { if (map.getLayer(id)) map.removeLayer(id); if (map.getSource(id)) map.removeSource(id); }
+  $("gmark").classList.add("hidden");
+}
+function addRaster(tiles, size, bright, credit, light) {
+  clearBasemap();
+  map.addSource("base", { type: "raster", tiles, tileSize: size || 256, maxzoom: 19 });
+  map.addLayer({ id: "base", type: "raster", source: "base", paint: { "raster-brightness-max": bright } }, "pk-fill");
+  map.setPaintProperty("pk-fill", "fill-opacity", 0);
+  map.setPaintProperty("pk-line", "line-opacity", 0.5);
+  map.setPaintProperty("bg", "background-color", light ? "#e9e9e6" : "#0b0d0c");
+  bmCredit = credit; setCredit();
+}
+function noBasemap() {
+  clearBasemap();
+  map.setPaintProperty("pk-fill", "fill-opacity", 0.9);
+  map.setPaintProperty("pk-line", "line-opacity", 1);
+  map.setPaintProperty("bg", "background-color", "#0b0d0c");
+  bmCredit = ""; setCredit();
+}
+function probe(url) { // can a tile actually load here? (blocked in some previews)
+  return new Promise((res) => {
+    const img = new Image(); const to = setTimeout(() => res(false), 6000);
+    img.onload = () => { clearTimeout(to); res(true); }; img.onerror = () => { clearTimeout(to); res(false); };
+    img.src = url.replace("{z}", "6").replace("{x}", "45").replace("{y}", "26").replace("{s}", "a");
+  });
+}
+async function setBasemap(key, userAction) {
+  bmKey = key; store.set("basemap2", key); bmState = "";
+  const b = BASEMAPS[key];
+  if (key === "none" || key === "streets") { noBasemap(); roadsVisible(key === "streets"); renderPanel(); return; }
+  roadsVisible(false);
+  if (b.google) return setGoogle(store.get("gkey", ""), userAction);
+  bmState = "loading"; renderPanel();
+  if (!(await probe(b.tiles[0]))) { bmState = "blocked"; if (bmKey === key) { noBasemap(); roadsVisible(true); } renderPanel(); return; }
+  if (bmKey !== key) return;
+  addRaster(b.tiles, b.size || 256, b.bright, b.credit, b.light);
+  bmState = "ok"; renderPanel();
+}
+let gSession = null, gErr = "";
+async function setGoogle(apiKey, userAction) {
+  if (!apiKey) { bmState = "needkey"; noBasemap(); roadsVisible(true); renderPanel(); return; }
+  roadsVisible(false);
+  bmState = "loading"; renderPanel();
+  let r;
+  try {
+    r = await fetch(`https://tile.googleapis.com/v1/createSession?key=${encodeURIComponent(apiKey)}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mapType: "roadmap", language: LANG === "ur" ? "ur" : "en-US", region: "PK", scale: "scaleFactor2x", highDpi: true, styles: GOOGLE_DARK }),
+    });
+  } catch (e) { bmState = "blocked"; noBasemap(); roadsVisible(true); renderPanel(); return; }  // never reached Google
+  try {
+    if (!r.ok) { let m = ""; try { m = (await r.json()).error.message; } catch (e2) {} throw new Error(m || "HTTP " + r.status); }
+    gSession = (await r.json()).session;
+    if (bmKey !== "google") return;
+    addRaster([`https://tile.googleapis.com/v1/2dtiles/{z}/{x}/{y}?session=${gSession}&key=${encodeURIComponent(apiKey)}`], 256, 1, "Map data © Google", false);
+    $("gmark").classList.remove("hidden");
+    bmState = "ok";
+  } catch (e) { bmState = "gfail"; gErr = e.message; noBasemap(); roadsVisible(true); }
+  renderPanel();
+}
+function roadsVisible(v) { if (map.getLayer("roads")) map.setLayoutProperty("roads", "visibility", v ? "visible" : "none"); }
+let roadsCache = {};
+async function loadRoads(key) {
+  try {
+    const r = roadsCache[key] || (roadsCache[key] = await fetch(`data/${key}-roads.json`).then((x) => x.json()));
+    if (cityKey !== key) return;
+    // one MultiLineString per road class keeps the map light even for Karachi's full street grid
+    const byClass = {};
+    let ax = r.origin[0], ay = r.origin[1], px = 0, py = 0;
+    for (const row of r.lines) {
+      const coords = [];
+      for (let i = 1; i < row.length; i += 2) { px += row[i]; py += row[i + 1]; coords.push(toLL(ax + px, ay + py)); }
+      (byClass[row[0]] = byClass[row[0]] || []).push(coords);
+    }
+    const feats = Object.keys(byClass).sort((a, b) => b - a).map((c) => ({ type: "Feature", properties: { c: +c },
+      geometry: { type: "MultiLineString", coordinates: byClass[c] } }));
+    map.getSource("roads").setData({ type: "FeatureCollection", features: feats });
+  } catch (e) { /* no street background for this city */ }
+}
+function setCredit() {
+  const short = innerWidth < 760;
+  const streets = (bmKey === "streets" || !bmCredit) && D ? (short ? " · Streets © OSM" : " · Streets © OpenStreetMap contributors") : "";
+  const base = short ? '© <a href="https://github.com/ShahzebSpeaks/pakistan-bus-routes" target="_blank" rel="noopener">Pakistan Bus Routes</a>, OSM (ODbL)' : ROUTE_CREDIT;
+  const bm = short ? bmCredit.replace(", © OpenStreetMap contributors", "") : bmCredit;
+  $("credit").innerHTML = base + (bm ? ` · ${bm}` : "") + streets;
+}
+
+function setNetwork() {
+  const feats = [];
+  if (D && V.lines) {
+    const seen = new Set();
+    D.shape_style.forEach(([c, e, r], i) => {
+      if (seen.has(r)) return; // one line per route, not per direction
+      seen.add(r);
+      const sh = shapes[i], coords = [];
+      for (let k = 0; k < sh.x.length; k++) coords.push(toLL(sh.x[k], sh.y[k]));
+      feats.push({ type: "Feature", properties: { col: D.colours[c], e, a: D.network_alpha, r, off: !routeVis[r] },
+        geometry: { type: "LineString", coordinates: coords } });
+    });
+    feats.sort((a, b) => (a.properties.off ? -1 : a.properties.e) - (b.properties.off ? -1 : b.properties.e));
+  }
+  map.getSource("net").setData({ type: "FeatureCollection", features: feats });
+}
+
+// ================================================================== landing markers
+let CITIES = [];
+const markers = {};
+function addMarkers() {
+  for (const c of CITIES) {
+    const el = document.createElement("div");
+    el.className = "city";
+    el.onclick = (ev) => { ev.stopPropagation(); openCity(c.key); };
+    markers[c.key] = { m: new maplibregl.Marker({ element: el, anchor: "left" }).setLngLat(c.center).addTo(map), el, c };
+  }
+  labelMarkers();
+}
+function labelMarkers() {
+  for (const { el, c } of Object.values(markers)) {
+    const name = LANG === "ur" ? c.name_ur || c.name : c.name;
+    el.innerHTML = `<span class="pin"></span><span class="lbl">${esc(name)}<span>${c.trips.toLocaleString("en")} ${t().trips}</span></span>`;
+  }
+}
+
+// ================================================================== vehicles
+const fx = $("fx"), ctx = fx.getContext("2d");
+let dpr = 1, W = 0, H = 0, sprites = [], spriteR = 0, spriteKey = "", heads = [], liveBy = {}, liveAll = 0, live = 0;
+const HS = 7; // stride of heads[]: px, py, colour, emphasis, trip, heading, mode index
+
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const r = $("map").getBoundingClientRect();
+  W = r.width; H = r.height;
+  fx.width = W * dpr; fx.height = H * dpr; fx.style.width = W + "px"; fx.style.height = H + "px";
+  chartBase = null; drawChart();
+}
+const dotRadius = () => Math.max(1.5, 2.2 * Math.pow(1.45, map.getZoom() - 11.5)) * V.size;
+
+function buildSprites() { // glowing dots, per colour x emphasis
+  spriteR = dotRadius(); spriteKey = V.glow + "|" + V.size;
+  sprites = D.colours.map((col) => [1, 1.6].map((scale) => {
+    const r = spriteR * scale * dpr, g = V.glow ? r * 3.2 : r * 1.2, s = Math.ceil(2 * g), cv = document.createElement("canvas");
+    cv.width = cv.height = s;
+    const c = cv.getContext("2d"), m = s / 2;
+    if (V.glow) {
+      const glow = c.createRadialGradient(m, m, r * 0.6, m, m, g);
+      glow.addColorStop(0, col + "70"); glow.addColorStop(1, col + "00");
+      c.fillStyle = glow; c.beginPath(); c.arc(m, m, g, 0, TAU); c.fill();
+    } else { c.fillStyle = "#000000aa"; c.beginPath(); c.arc(m, m, r * 1.2, 0, TAU); c.fill(); }
+    c.fillStyle = col; c.beginPath(); c.arc(m, m, r, 0, TAU); c.fill();
+    c.fillStyle = "#ffffff"; c.beginPath(); c.arc(m, m, r * 0.5, 0, TAU); c.fill();
+    return { cv, half: m };
+  }));
+}
+
+// ---------- real vehicles, drawn top-down in metres (front faces +x)
+const MODES = ["metro", "brt", "electric", "feeder", "bus", "pink", "wagon", "rail"];
+const VEH = {
+  brt:      { L: 18,  W: 2.55, kind: "artic" },              // articulated Metrobus
+  metro:    { L: 98,  W: 2.9,  kind: "train", cars: 5, body: "#e3e7ea" },  // Orange Line set
+  rail:     { L: 120, W: 3.0,  kind: "train", cars: 5, body: "#2f5440" },
+  electric: { L: 12,  W: 2.55, kind: "bus", ebus: true },
+  feeder:   { L: 12,  W: 2.55, kind: "bus" },
+  bus:      { L: 11.5, W: 2.5, kind: "bus" },
+  pink:     { L: 12,  W: 2.55, kind: "bus" },
+  wagon:    { L: 5.4, W: 1.9,  kind: "van" },
+};
+const LANE = { brt: 1.9, metro: 2.1, rail: 2.3, electric: 3.3, feeder: 3.3, bus: 3.3, pink: 3.3, wagon: 3.6 }; // metres left of the road centre (Pakistan drives on the left)
+const DRAW_ORDER = ["wagon", "pink", "bus", "feeder", "electric", "brt", "rail", "metro"]; // trains (elevated) on top
+const SPX = 10, PAD = 1.4;
+const MINPX = { brt: 58, metro: 170, rail: 180, electric: 42, feeder: 42, bus: 40, pink: 42, wagon: 24 }; // css px // sprite pixels per metre, padding in metres
+const vehCache = new Map();
+
+function shade(hex, f) {
+  const n = parseInt(hex.slice(1, 7), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  if (f > 0) { r += (255 - r) * f; g += (255 - g) * f; b += (255 - b) * f; } else { r *= 1 + f; g *= 1 + f; b *= 1 + f; }
+  return `rgb(${r | 0},${g | 0},${b | 0})`;
+}
+function rrect(c, x, y, w, h, r) { c.beginPath(); c.roundRect(x, y, w, h, r); }
+
+function busSection(c, x, y, L, W, col, front, rear, ebus) {
+  const r = W * 0.16;
+  c.save();
+  c.shadowColor = "rgba(0,0,0,0.65)"; c.shadowBlur = 0.9 * SPX; c.shadowOffsetX = 0.25 * SPX; c.shadowOffsetY = 0.35 * SPX;
+  c.fillStyle = col; rrect(c, x, y, L, W, r); c.fill();
+  c.restore();
+  // roof: lighter centre panel and side window bands
+  c.fillStyle = shade(col, 0.22); rrect(c, x + 0.35, y + W * 0.16, L - 0.7, W * 0.68, r * 0.5); c.fill();
+  c.fillStyle = "rgba(12,18,24,0.55)";
+  c.fillRect(x + 0.5, y + W * 0.05, L - 1.0, W * 0.07); c.fillRect(x + 0.5, y + W * 0.88, L - 1.0, W * 0.07);
+  // roof equipment: AC units, or battery packs on electric buses
+  c.fillStyle = ebus ? "#2b3a33" : shade(col, -0.3);
+  const units = Math.max(1, Math.round(L / 6));
+  for (let i = 0; i < units; i++) { const ux = x + L * (0.22 + 0.5 * i / Math.max(1, units)); rrect(c, ux, y + W * 0.27, Math.min(2.4, L * 0.18), W * 0.46, 0.25); c.fill(); }
+  if (ebus) { c.fillStyle = "#7CF5C0"; c.fillRect(x + L * 0.15, y + W * 0.47, L * 0.7, W * 0.06); }
+  if (front) {
+    c.fillStyle = "#0d151d"; rrect(c, x + L - 1.05, y + W * 0.07, 0.85, W * 0.86, 0.3); c.fill();
+    c.fillStyle = "rgba(255,255,255,0.35)"; c.fillRect(x + L - 0.95, y + W * 0.12, 0.12, W * 0.76);
+    c.fillStyle = "#fffbe0"; c.fillRect(x + L - 0.14, y + W * 0.05, 0.12, W * 0.16); c.fillRect(x + L - 0.14, y + W * 0.79, 0.12, W * 0.16);
+    c.fillStyle = shade(col, -0.45); c.fillRect(x + L - 1.4, y - 0.18, 0.25, 0.2); c.fillRect(x + L - 1.4, y + W - 0.02, 0.25, 0.2); // mirrors
+  }
+  if (rear) {
+    c.fillStyle = "rgba(0,0,0,0.35)"; c.fillRect(x, y + W * 0.1, 0.35, W * 0.8);
+    c.fillStyle = "#ff3b30"; c.fillRect(x, y + W * 0.05, 0.14, W * 0.16); c.fillRect(x, y + W * 0.79, 0.14, W * 0.16);
+  }
+}
+
+function vehSprite(mode, col) {
+  const key = mode + col;
+  if (vehCache.has(key)) return vehCache.get(key);
+  const v = VEH[mode], cv = document.createElement("canvas");
+  cv.width = Math.ceil((v.L + 2 * PAD) * SPX); cv.height = Math.ceil((v.W + 2 * PAD) * SPX);
+  const c = cv.getContext("2d");
+  c.scale(SPX, SPX); c.translate(PAD, PAD);
+  // the shadow offsets/blur are set in device pixels, so scale them back
+  if (v.kind === "bus") {
+    busSection(c, 0, 0, v.L, v.W, col, true, true, v.ebus);
+  } else if (v.kind === "artic") {
+    const front = 10.8, joint = 0.9, rear = v.L - front - joint;
+    busSection(c, 0, 0, rear, v.W, col, false, true, false);
+    busSection(c, rear + joint, 0, front, v.W, col, true, false, false);
+    c.fillStyle = "#1b1f22"; c.fillRect(rear - 0.1, v.W * 0.08, joint + 0.2, v.W * 0.84);
+    c.fillStyle = "#3a4045"; for (let i = 0; i < 5; i++) c.fillRect(rear + 0.05 + i * 0.18, v.W * 0.1, 0.07, v.W * 0.8);
+    c.fillStyle = "#ffffff"; c.fillRect(rear + joint + 0.6, v.W * 0.45, front - 2.2, v.W * 0.1);   // BRT livery stripe
+  } else if (v.kind === "van") {
+    c.save(); c.shadowColor = "rgba(0,0,0,0.65)"; c.shadowBlur = 0.6 * SPX; c.shadowOffsetX = 0.2 * SPX; c.shadowOffsetY = 0.25 * SPX;
+    c.fillStyle = "#eef1f2"; rrect(c, 0, 0, v.L, v.W, 0.45); c.fill(); c.restore();
+    c.fillStyle = col; c.fillRect(0.3, 0.02, v.L - 0.8, 0.22); c.fillRect(0.3, v.W - 0.24, v.L - 0.8, 0.22);  // side stripes
+    c.fillStyle = "#d4d9db"; rrect(c, 0.6, 0.35, v.L - 1.9, v.W - 0.7, 0.25); c.fill();                        // roof
+    c.fillStyle = "#b9c0c4"; for (let i = 0; i < 4; i++) c.fillRect(0.9 + i * 0.8, 0.45, 0.06, v.W - 0.9);         // roof rack
+    c.fillStyle = "#0d151d"; c.beginPath(); c.moveTo(v.L - 1.3, 0.2); c.lineTo(v.L - 0.45, 0.32); c.lineTo(v.L - 0.45, v.W - 0.32); c.lineTo(v.L - 1.3, v.W - 0.2); c.closePath(); c.fill();
+    c.fillStyle = "#fffbe0"; c.fillRect(v.L - 0.12, 0.12, 0.1, 0.3); c.fillRect(v.L - 0.12, v.W - 0.42, 0.1, 0.3);
+    c.fillStyle = "#ff3b30"; c.fillRect(0, 0.12, 0.1, 0.3); c.fillRect(0, v.W - 0.42, 0.1, 0.3);
+  } else { // train: cars with gangways, roof stripe in line colour, cabs at both ends
+    const gap = 0.7, carL = (v.L - gap * (v.cars - 1)) / v.cars;
+    for (let i = 0; i < v.cars; i++) {
+      const x = i * (carL + gap), cab0 = i === 0, cab1 = i === v.cars - 1;
+      c.save(); c.shadowColor = "rgba(0,0,0,0.7)"; c.shadowBlur = 1.2 * SPX; c.shadowOffsetX = 0.3 * SPX; c.shadowOffsetY = 0.45 * SPX;
+      c.fillStyle = v.body; rrect(c, x, 0, carL, v.W, [cab0 ? 1.4 : 0.3, cab1 ? 1.4 : 0.3, cab1 ? 1.4 : 0.3, cab0 ? 1.4 : 0.3]); c.fill(); c.restore();
+      c.fillStyle = shade(v.body, -0.12); c.fillRect(x + 0.6, v.W * 0.18, carL - 1.2, v.W * 0.64);
+      c.fillStyle = col; c.fillRect(x + 0.4, v.W * 0.42, carL - 0.8, v.W * 0.16);
+      c.fillStyle = "#59636a"; for (let u = 0; u < 2; u++) c.fillRect(x + carL * (0.25 + 0.5 * u) - 0.6, v.W * 0.24, 1.2, v.W * 0.52);
+      if (i < v.cars - 1) { c.fillStyle = "#2a2f33"; c.fillRect(x + carL - 0.1, v.W * 0.2, gap + 0.2, v.W * 0.6); }
+      if (cab1) { c.fillStyle = "#0d151d"; rrect(c, x + carL - 1.3, v.W * 0.12, 1.0, v.W * 0.76, 0.5); c.fill(); c.fillStyle = "#fffbe0"; c.fillRect(x + carL - 0.18, v.W * 0.12, 0.14, v.W * 0.14); c.fillRect(x + carL - 0.18, v.W * 0.74, 0.14, v.W * 0.14); }
+      if (cab0) { c.fillStyle = "#0d151d"; rrect(c, x + 0.3, v.W * 0.12, 1.0, v.W * 0.76, 0.5); c.fill(); c.fillStyle = "#ff3b30"; c.fillRect(x + 0.04, v.W * 0.12, 0.14, v.W * 0.14); c.fillRect(x + 0.04, v.W * 0.74, 0.14, v.W * 0.14); }
+    }
+  }
+  const sp = { cv, cx: cv.width / 2, cy: cv.height / 2, L: v.L };
+  vehCache.set(key, sp);
+  return sp;
+}
+let beamSprite = null;
+function beam() { // headlight cone, drawn additively in front of each vehicle at night
+  if (beamSprite) return beamSprite;
+  const len = 11, cv = document.createElement("canvas"); cv.width = len * SPX; cv.height = 10 * SPX;
+  const c = cv.getContext("2d"); c.scale(SPX, SPX);
+  const g = c.createLinearGradient(0, 0, len, 0); g.addColorStop(0, "rgba(255,236,170,0.32)"); g.addColorStop(1, "rgba(255,236,170,0)");
+  c.fillStyle = g; c.beginPath(); c.moveTo(0, 4.2); c.lineTo(len, 2); c.lineTo(len, 8); c.lineTo(0, 5.8); c.closePath(); c.fill();
+  return (beamSprite = { cv, cy: cv.height / 2 });
+}
+function nightLevel(t) { // 0 by day, 1 at night, eased around dusk (18:00-19:00) and dawn (05:30-06:30)
+  const h = (((t % 86400) + 86400) % 86400) / 3600;
+  if (h >= 19 || h < 5.5) return 1;
+  if (h >= 18) return h - 18;
+  if (h < 6.5) return 6.5 - h;
+  return 0;
+}
+
+// ---------- stations (BRT / metro), drawn on the canvas so no web fonts or glyph servers are needed
+function drawStations(k, cx, cy, hw, hh, z) {
+  if (!D.stXY || z < 12.2 || !V.stations) return;
+  const boxes = [], label = z >= 13.4, rad = Math.min(7, 2.5 + (z - 12) * 1.2) * dpr;
+  ctx.font = `600 ${11 * dpr}px Inter, Arial, sans-serif`; ctx.textBaseline = "middle"; ctx.lineJoin = "round";
+  for (const st of D.stXY) {
+    const px = hw + (st.x - cx) * k, py = hh - (st.y - cy) * k;
+    if (px < -50 || py < -20 || px > fx.width + 50 || py > fx.height + 20) continue;
+    ctx.fillStyle = "#0b0d0c"; ctx.beginPath(); ctx.arc(px, py, rad + 1.5 * dpr, 0, TAU); ctx.fill();
+    ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(px, py, rad, 0, TAU); ctx.fill();
+    ctx.fillStyle = st.col; ctx.beginPath(); ctx.arc(px, py, rad * 0.55, 0, TAU); ctx.fill();
+    if (!label) continue;
+    const name = LANG === "ur" && st.ur ? st.ur : st.name, w = ctx.measureText(name).width, bx = px + rad + 5 * dpr, by = py - 8 * dpr, bh = 16 * dpr;
+    if (boxes.some((b) => bx < b[0] + b[2] && bx + w > b[0] && by < b[1] + b[3] && by + bh > b[1])) continue;
+    boxes.push([bx, by, w, bh]);
+    ctx.strokeStyle = "rgba(8,10,9,0.92)"; ctx.lineWidth = 4 * dpr; ctx.strokeText(name, bx, py);
+    ctx.fillStyle = "#e9eeeb"; ctx.fillText(name, bx, py);
+  }
+}
+
+const TRAIL = 8, tmp = [0, 0, 0];
+let simT = 8 * 3600, speed = 120, playing = true, lastFrame = performance.now();
+
+function draw() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, fx.width, fx.height);
+  heads = [];
+  if (!D) return;
+  if (Math.abs(dotRadius() - spriteR) > 0.15 || spriteKey !== V.glow + "|" + V.size) buildSprites();
+  const z = map.getZoom();
+  const k = 512 * Math.pow(2, z) / (TAU * R) * dpr;     // device px per mercator metre
+  const pxm = k * D.mscale;                             // device px per ground metre
+  const cLL = map.getCenter();
+  const cx = cLL.lng * TAU / 360 * R, cy = R * Math.log(Math.tan(Math.PI / 4 + cLL.lat * Math.PI / 360));
+  const hw = W * dpr / 2, hh = H * dpr / 2, step = speed / 30;
+  const real = V.style === "vehicles" || (V.style === "auto" && z >= 14);
+  // like a navigation app, vehicles keep a readable minimum size; real proportions are kept
+  const EX = {};
+  for (const m of MODES) EX[m] = real ? Math.max(V.size, MINPX[m] * dpr * V.size / (VEH[m].L * pxm)) : 1;
+  drawStations(k, cx, cy, hw, hh, z);
+  const n = tripStarts.length;
+  const lo = bisect(tripStarts, simT - maxDur), hi = bisect(tripStarts, simT);
+  const paths = !real && V.trails ? D.colours.map(() => Array.from({ length: TRAIL }, () => new Path2D())) : null;
+  live = 0; liveAll = 0; liveBy = {};
+  for (let i = lo; i <= hi && i < n; i++) {
+    const st = tripStarts[i];
+    if (st > simT || tripEnd[i] < simT) continue;
+    liveAll++;
+    const pi = trips[4 * i + 1];
+    if (!patVis[pi]) continue;
+    const pat = pats[pi], prof = profs[trips[4 * i + 2]], mode = patMode[pi];
+    if (!pos(pat, prof, simT - st, tmp, (VEH[mode].kind === "train" ? 20 : 6) * D.mscale)) continue;
+    live++; liveBy[mode] = (liveBy[mode] || 0) + 1;
+    const offPx = LANE[mode] * pxm * EX[mode], sn = Math.sin(tmp[2]), cs = Math.cos(tmp[2]);
+    let px = hw + (tmp[0] - cx) * k - sn * offPx, py = hh - (tmp[1] - cy) * k - cs * offPx;
+    if (px < -400 || py < -400 || px > fx.width + 400 || py > fx.height + 400) continue;
+    heads.push(px, py, pat.c, pat.e, i, tmp[2], MODES.indexOf(mode));
+    if (!paths) continue;
+    for (let a = 1; a <= TRAIL; a++) {
+      if (!pos(pat, prof, simT - st - a * step, tmp)) break;
+      const s2 = Math.sin(tmp[2]), c2 = Math.cos(tmp[2]);
+      const qx = hw + (tmp[0] - cx) * k - s2 * offPx, qy = hh - (tmp[1] - cy) * k - c2 * offPx;
+      const p = paths[pat.c][a - 1]; p.moveTo(px, py); p.lineTo(qx, qy);
+      px = qx; py = qy;
+    }
+  }
+  if (paths) {
+    ctx.lineCap = "round"; ctx.lineWidth = spriteR * 1.1 * dpr;
+    for (let c = 0; c < paths.length; c++) {
+      ctx.strokeStyle = D.colours[c];
+      for (let a = 0; a < TRAIL; a++) { ctx.globalAlpha = 0.55 * (1 - a / TRAIL); ctx.stroke(paths[c][a]); }
+    }
+    ctx.globalAlpha = 1;
+  }
+  if (real) {
+    const night = V.lights ? nightLevel(simT) : 0;
+    if (night > 0) { // headlight beams first, additive
+      const bm = beam(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = night;
+      for (let h = 0; h < heads.length; h += HS) {
+        const m = MODES[heads[h + 6]], v = VEH[m], sc = pxm * EX[m] / SPX, a = -heads[h + 5], ca = Math.cos(a) * sc, sa = Math.sin(a) * sc;
+        ctx.setTransform(ca, sa, -sa, ca, heads[h], heads[h + 1]);
+        ctx.drawImage(bm.cv, (v.L / 2) * SPX, -bm.cy);
+      }
+      ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+    }
+    for (const m of DRAW_ORDER) {
+      const mi = MODES.indexOf(m);
+      for (let h = 0; h < heads.length; h += HS) {
+        if (heads[h + 6] !== mi) continue;
+        const sp = vehSprite(m, D.colours[heads[h + 2]]), sc = pxm * EX[m] / SPX, a = -heads[h + 5], ca = Math.cos(a) * sc, sa = Math.sin(a) * sc;
+        ctx.setTransform(ca, sa, -sa, ca, heads[h], heads[h + 1]);
+        ctx.drawImage(sp.cv, -sp.cx, -sp.cy);
+      }
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  } else {
+    for (let e = 0; e <= 1; e++)
+      for (let h = 0; h < heads.length; h += HS) {
+        if (heads[h + 3] !== e) continue;
+        const sp = sprites[heads[h + 2]][e];
+        ctx.drawImage(sp.cv, heads[h] - sp.half, heads[h + 1] - sp.half);
+      }
+  }
+  if (selTrip >= 0) { // ring around the vehicle the user tapped
+    for (let h = 0; h < heads.length; h += HS) if (heads[h + 4] === selTrip) {
+      const m = MODES[heads[h + 6]], r = real ? Math.max(spriteR * 4 * dpr, VEH[m].L * pxm * EX[m] * 0.6) : spriteR * 4 * dpr;
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 2 * dpr; ctx.setLineDash([6 * dpr, 4 * dpr]); ctx.beginPath();
+      ctx.arc(heads[h], heads[h + 1], Math.min(r, 160 * dpr), 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+  $("count").innerHTML = t().running(live, liveAll);
+}
+
+// ================================================================== 24 h chart (honours filters)
+const chart = $("chart"), cctx = chart.getContext("2d");
+let chartBase = null;
+function histogram() {
+  const step = 300, nb = Math.floor((D.t1 - D.t0) / step) + 1, out = {};
+  for (const [m] of D.legend) out[m] = new Float64Array(nb + 1);
+  const n = tripStarts.length;
+  for (let i = 0; i < n; i++) {
+    const pi = trips[4 * i + 1];
+    if (!patVis[pi]) continue;
+    const a = Math.max(0, Math.ceil((tripStarts[i] - D.t0) / step)), b = Math.min(nb - 1, Math.floor((tripEnd[i] - D.t0) / step));
+    if (b < a) continue;
+    const arr = out[patMode[pi]]; arr[a]++; arr[b + 1]--;
+  }
+  for (const m in out) { let s = 0; for (let i = 0; i <= nb; i++) { s += out[m][i]; out[m][i] = s; } }
+  return { out, nb };
+}
+function drawChart() {
+  if (!D || !chart.clientWidth) return;
+  const w = chart.clientWidth * dpr, h = chart.clientHeight * dpr;
+  if (chart.width !== w || chart.height !== h || !chartBase) {
+    chart.width = w; chart.height = h;
+    const off = document.createElement("canvas"); off.width = w; off.height = h;
+    const g = off.getContext("2d");
+    const { out, nb } = histogram();
+    const tot = new Float64Array(nb);
+    for (const m in out) for (let i = 0; i < nb; i++) tot[i] += out[m][i];
+    const mx = Math.max(1, ...tot), base = new Float64Array(nb);
+    for (const [m, , , cols] of D.legend) {
+      if (F.modeOff.has(m)) continue;
+      g.beginPath();
+      for (let i = 0; i < nb; i++) g.lineTo(i / (nb - 1) * w, h - (base[i] + out[m][i]) / mx * (h - 12 * dpr));
+      for (let i = nb - 1; i >= 0; i--) g.lineTo(i / (nb - 1) * w, h - base[i] / mx * (h - 12 * dpr));
+      g.closePath(); g.fillStyle = cols[0] + "aa"; g.fill();
+      for (let i = 0; i < nb; i++) base[i] += out[m][i];
+    }
+    g.fillStyle = "rgba(255,255,255,0.45)"; g.font = `${10 * dpr}px Inter, sans-serif`;
+    for (let hr = 6; hr <= 24; hr += 3) {
+      const x = (hr * 3600 - D.t0) / (D.t1 - D.t0) * w;
+      g.fillRect(x, 0, 1, 4 * dpr); g.fillText(String(hr % 24).padStart(2, "0"), x + 3 * dpr, 10 * dpr);
+    }
+    chartBase = off;
+  }
+  cctx.clearRect(0, 0, w, h);
+  cctx.drawImage(chartBase, 0, 0);
+  const x = (simT - D.t0) / (D.t1 - D.t0) * w;
+  cctx.fillStyle = "#fff"; cctx.fillRect(x - dpr, 0, 2 * dpr, h);
+}
+chart.addEventListener("pointerdown", (e) => {
+  if (!D) return;
+  const r = chart.getBoundingClientRect();
+  simT = D.t0 + (e.clientX - r.left) / r.width * (D.t1 - D.t0);
+  slider.value = Math.round(simT);
+});
+
+// ================================================================== clock + controls
+const slider = $("slider"), clockEl = $("clock");
+const fmt = (s) => { s = ((Math.floor(s) % 86400) + 86400) % 86400;
+  return String(Math.floor(s / 3600)).padStart(2, "0") + ":" + String(Math.floor(s / 60) % 60).padStart(2, "0"); };
+
+let legendTick = 0;
+function tick(now) {
+  const dt = Math.min(0.1, (now - lastFrame) / 1000); lastFrame = now;
+  if (D) {
+    if (playing) {
+      simT += dt * speed;
+      if (simT > D.t1) simT = D.t0;
+      slider.value = Math.round(simT);
+    }
+    clockEl.innerHTML = `${fmt(simT)}<small>PKT</small>`;
+    if (followTrip >= 0) followStep();
+    drawChart();
+  }
+  draw();
+  if (D && ++legendTick % 15 === 0) updateLegendCounts();
+  requestAnimationFrame(tick);
+}
+function setPlaying(p) { playing = p; $("play").textContent = p ? "❚❚" : "▶"; }
+function jumpTo(h) { simT = Math.min(Math.max(h * 3600, D.t0), D.t1); slider.value = Math.round(simT); }
+
+function setLegend() {
+  $("legend").innerHTML = `<div class="title t"><span>${t().liveNow}</span></div>` + D.legend.map(([m, en, ur, cols]) =>
+    `<label class="${F.modeOff.has(m) ? "off" : ""}" data-m="${m}">` +
+    `<i style="background:${cols[0]};color:${cols[0]}"></i><span class="t">${LANG === "ur" ? ur : en}</span><span class="n" data-n="${m}">0</span></label>`).join("");
+  $("legend").querySelectorAll("label").forEach((lb) => lb.onclick = (e) => {
+    e.preventDefault();
+    const m = lb.dataset.m;
+    F.modeOff.has(m) ? F.modeOff.delete(m) : F.modeOff.add(m);
+    applyFilters();
+  });
+  updateLegendCounts();
+}
+function updateLegendCounts() {
+  $("legend").querySelectorAll("[data-n]").forEach((el) => el.textContent = (liveBy[el.dataset.n] || 0).toLocaleString("en"));
+}
+
+// ================================================================== side panel
+let panelTab = null, routeQuery = "";
+function openPanel(tab) {
+  panelTab = panelTab === tab ? null : tab;
+  $("panel").classList.toggle("hidden", !panelTab);
+  $("legend").classList.toggle("hidden", !!panelTab || !D);
+  $("btnFilters").classList.toggle("on", panelTab === "filters");
+  $("btnMap").classList.toggle("on", panelTab === "map" || panelTab === "display");
+  renderPanel();
+}
+function renderPanel() {
+  if (!panelTab) return;
+  const L = t(), el = $("panel");
+  const tabs = (D ? ["filters", "map", "display"] : ["map"]).map((k) =>
+    `<button data-tab="${k}" class="t ${panelTab === k ? "on" : ""}">${L[k]}</button>`).join("");
+  let body = "";
+  if (panelTab === "filters" && D) {
+    const modeCount = {}, sysCount = {};
+    D.routes.forEach((r) => { modeCount[r.mode] = (modeCount[r.mode] || 0) + 1; sysCount[r.system] = (sysCount[r.system] || 0) + 1; });
+    const systems = Object.keys(sysCount).sort((a, b) => sysCount[b] - sysCount[a]);
+    const q = routeQuery.trim().toLowerCase();
+    const matches = D.routes.map((r, i) => [r, i]).filter(([r]) => !q || r.id.toLowerCase().includes(q) || r.name.toLowerCase().includes(q)
+      || (r.name_ur || "").includes(routeQuery.trim()) || r.system.toLowerCase().includes(q));
+    const shown = [...matches.filter(([, i]) => F.only.has(i)), ...matches.filter(([, i]) => !F.only.has(i))].slice(0, 80);
+    body = `
+      <h4><span class="t">${L.modes}</span></h4>
+      <div class="chips">${D.legend.map(([m, en, ur, cols]) => `<button class="chip ${F.modeOff.has(m) ? "off" : "on"}" data-mode="${m}">
+        <i style="background:${cols[0]};color:${cols[0]}"></i><span class="t">${LANG === "ur" ? ur : en}</span> <span class="k">${modeCount[m]}</span></button>`).join("")}</div>
+      <h4><span class="t">${L.confidence}</span></h4>
+      <div class="seg">${["all", "published", "assumed"].map((c) => `<button data-conf="${c}" class="t ${F.conf === c ? "on" : ""}">${L[c]}</button>`).join("")}</div>
+      <h4><span class="t">${L.services}</span></h4>
+      <div class="list">${systems.map((s) => `<label><input type="checkbox" data-sys="${esc(s)}" ${F.sysOff.has(s) ? "" : "checked"}>
+        <span class="nm" style="color:var(--ink)">${esc(s)}</span><span class="n">${sysCount[s]}</span></label>`).join("")}</div>
+      <h4><span class="t">${L.routes}</span>${F.only.size ? `<button class="linkish t" data-clearonly>${L.clear}</button>` : ""}</h4>
+      <input type="search" id="rq" placeholder="${L.findRoute}" value="${esc(routeQuery)}">
+      ${F.only.size ? `<div class="muted t" style="margin:6px 0">${L.onlySel(F.only.size)}</div>` : ""}
+      <div class="list" style="margin-top:6px">${shown.length ? shown.map(([r, i]) => {
+        const col = D.legend.find((l) => l[0] === r.mode)[3][0];
+        return `<label><input type="checkbox" data-route="${i}" ${F.only.has(i) ? "checked" : ""}>
+        <span class="rid" style="color:${col}">${esc(r.id)}</span><span class="nm">${esc(LANG === "ur" && r.name_ur ? r.name_ur : r.name)}</span>
+        <button class="linkish" data-focus="${i}" title="Zoom to route">⌖</button></label>`; }).join("") : `<div class="muted t" style="padding:8px">${L.noRoutes}</div>`}</div>
+      <p><button data-reset class="t" ${filtersActive() ? "" : "disabled"}>${L.reset}</button></p>`;
+  } else if (panelTab === "map") {
+    const msg = { blocked: L.bmBlocked, needkey: L.gNeedKey, gfail: L.gFail + (gErr ? ` (Google: ${esc(gErr)})` : ""), loading: "…" }[bmState] || "";
+    body = `<h4><span class="t">${L.basemap}</span></h4>
+      <div class="bm">${Object.entries(BASEMAPS).map(([k, b]) => `<button data-bm="${k}" class="${bmKey === k ? "on" : ""}">
+        <span class="sw" style="background:${b.sw}"></span><span class="t">${LANG === "ur" ? b.ur : b.en}</span><small>${b.note}</small></button>`).join("")}</div>
+      ${bmKey === "google" ? `<h4><span class="t">${L.gkey}</span></h4>
+        <div class="row"><input type="password" id="gk" placeholder="AIza…" value="${esc(store.get("gkey", ""))}"><button id="gkSave" class="t">${L.save}</button></div>` : ""}
+      <div id="bmMsg" class="muted t ${["blocked", "gfail"].includes(bmState) ? "err" : ""}">${msg}</div>`;
+  } else if (panelTab === "display" && D) {
+    body = `<h4><span class="t">${L.display}</span></h4>
+      <label class="switch"><span class="t">${L.lines}</span><input type="checkbox" data-v="lines" ${V.lines ? "checked" : ""}></label>
+      <label class="switch"><span class="t">${L.trails}</span><input type="checkbox" data-v="trails" ${V.trails ? "checked" : ""}></label>
+      <label class="switch"><span class="t">${L.glow}</span><input type="checkbox" data-v="glow" ${V.glow ? "checked" : ""}></label>
+      <label class="switch"><span class="t">${L.stationsL}</span><input type="checkbox" data-v="stations" ${V.stations ? "checked" : ""}></label>
+      <label class="switch"><span class="t">${L.lightsL}</span><input type="checkbox" data-v="lights" ${V.lights ? "checked" : ""}></label>
+      <h4><span class="t">${L.vstyle}</span></h4>
+      <div class="seg">${[["auto", L.vAuto], ["dots", L.vDots], ["vehicles", L.vReal]].map(([v, l]) => `<button data-style="${v}" class="t ${V.style === v ? "on" : ""}">${l}</button>`).join("")}</div>
+      <div class="muted t" style="margin-top:6px">${L.vHint}</div>
+      <h4><span class="t">${L.size}</span></h4>
+      <div class="seg">${[[0.7, "S"], [1, "M"], [1.45, "L"], [2, "XL"]].map(([v, l]) => `<button data-size="${v}" class="${V.size === v ? "on" : ""}">${l}</button>`).join("")}</div>
+      <h4><span class="t">${L.jump}</span></h4>
+      <div class="chips">${[[8, "morning"], [13, "midday"], [18, "evening"], [22, "night"]].map(([h, k]) =>
+        `<button class="chip" data-jump="${h}"><span class="t">${L[k]}</span> <span class="k">${String(h).padStart(2, "0")}:00</span></button>`).join("")}</div>`;
+  }
+  el.innerHTML = `<div class="tabs">${tabs}<button class="x" aria-label="Close">✕</button></div><div class="body">${body}</div>`;
+  el.querySelector(".x").onclick = () => openPanel(panelTab);
+  el.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => {
+    panelTab = b.dataset.tab;
+    $("btnFilters").classList.toggle("on", panelTab === "filters");
+    $("btnMap").classList.toggle("on", panelTab === "map" || panelTab === "display");
+    renderPanel();
+  });
+  el.querySelectorAll("[data-mode]").forEach((b) => b.onclick = () => { const m = b.dataset.mode; F.modeOff.has(m) ? F.modeOff.delete(m) : F.modeOff.add(m); applyFilters(); });
+  el.querySelectorAll("[data-conf]").forEach((b) => b.onclick = () => { F.conf = b.dataset.conf; applyFilters(); });
+  el.querySelectorAll("[data-sys]").forEach((c) => c.onchange = () => { const s = c.dataset.sys; c.checked ? F.sysOff.delete(s) : F.sysOff.add(s); applyFilters(); });
+  el.querySelectorAll("[data-route]").forEach((c) => c.onchange = () => { const i = +c.dataset.route; c.checked ? F.only.add(i) : F.only.delete(i); applyFilters(); });
+  el.querySelectorAll("[data-focus]").forEach((b) => b.onclick = (e) => { e.preventDefault(); focusRoute(+b.dataset.focus); });
+  const cl = el.querySelector("[data-clearonly]"); if (cl) cl.onclick = () => { F.only.clear(); applyFilters(); };
+  const rs = el.querySelector("[data-reset]"); if (rs) rs.onclick = resetFilters;
+  const rq = el.querySelector("#rq");
+  if (rq) rq.oninput = () => { routeQuery = rq.value; const p = rq.selectionStart; renderPanel(); const n = $("rq"); n.focus(); n.setSelectionRange(p, p); };
+  el.querySelectorAll("[data-bm]").forEach((b) => b.onclick = () => setBasemap(b.dataset.bm, true));
+  const gs = el.querySelector("#gkSave"); if (gs) gs.onclick = () => { const k = $("gk").value.trim(); store.set("gkey", k); setGoogle(k, true); };
+  el.querySelectorAll("[data-v]").forEach((c) => c.onchange = () => { V[c.dataset.v] = c.checked; if (c.dataset.v === "lines") setNetwork(); });
+  el.querySelectorAll("[data-style]").forEach((b) => b.onclick = () => { V.style = b.dataset.style; renderPanel(); });
+  el.querySelectorAll("[data-size]").forEach((b) => b.onclick = () => { V.size = +b.dataset.size; renderPanel(); });
+  el.querySelectorAll("[data-jump]").forEach((b) => b.onclick = () => jumpTo(+b.dataset.jump));
+}
+function routeBounds(ri) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  D.shape_style.forEach(([, , r], i) => { if (r !== ri) return; const s = shapes[i];
+    for (let k = 0; k < s.x.length; k++) { x0 = Math.min(x0, s.x[k]); x1 = Math.max(x1, s.x[k]); y0 = Math.min(y0, s.y[k]); y1 = Math.max(y1, s.y[k]); } });
+  return [toLL(x0, y0), toLL(x1, y1)];
+}
+function focusRoute(ri) {
+  map.setFilter("hl", ["==", ["get", "r"], ri]);
+  map.fitBounds(routeBounds(ri), { padding: { top: 120, bottom: 200, left: 40, right: innerWidth > 760 ? 380 : 40 }, duration: 900, maxZoom: 15 });
+}
+
+// ================================================================== tap a vehicle
+let selTrip = -1, followTrip = -1;
+function showCard(ti) {
+  selTrip = ti;
+  const ri = patRoute[trips[4 * ti + 1]], r = D.routes[ri], L = t();
+  const lg = D.legend.find((l) => l[0] === r.mode);
+  map.setFilter("hl", ["==", ["get", "r"], ri]);
+  $("card").innerHTML = `<button class="x" aria-label="Close">✕</button>
+    <div class="rid" style="color:${lg[3][0]}">${esc(r.id)}</div>
+    <div class="nm">${esc(r.name)}</div>${r.name_ur ? `<div class="ur-nm">${esc(r.name_ur)}</div>` : ""}
+    <dl><dt class="t">${L.system}</dt><dd>${esc(LANG === "ur" && r.system_ur ? r.system_ur : r.system)}</dd>
+    <dt class="t">${L.headway}</dt><dd>${r.headway} ${L.min} <span class="badge t ${r.conf === "published" ? "pub" : "ass"}">${r.conf === "published" ? L.pub : L.ass}</span></dd>
+    <dt class="t">${L.hours}</dt><dd>${fmt(r.hours[0])}–${fmt(r.hours[1])}</dd>
+    ${r.fare ? `<dt class="t">${L.fare}</dt><dd>${esc(r.fare)}</dd>` : ""}
+    <dt class="t">${L.length}</dt><dd>${r.km} km</dd></dl>
+    <div class="acts"><button id="cFollow" class="t ${followTrip === ti ? "on" : ""}">${followTrip === ti ? L.following : L.follow}</button>
+    <button id="cOnly" class="t">${L.only}</button></div>`;
+  $("card").classList.remove("hidden");
+  $("card").querySelector(".x").onclick = hideCard;
+  $("cFollow").onclick = () => { followTrip = followTrip === ti ? -1 : ti; if (followTrip >= 0 && map.getZoom() < 13.5) map.jumpTo({ zoom: 14.5 }); showCard(ti); };
+  $("cOnly").onclick = () => { F.only = new Set([ri]); applyFilters(); focusRoute(ri); };
+}
+function hideCard() { selTrip = -1; followTrip = -1; $("card").classList.add("hidden"); map.setFilter("hl", ["==", ["get", "r"], -1]); }
+function followStep() {
+  const i = followTrip, st = tripStarts[i];
+  if (simT < st || simT > tripEnd[i]) { followTrip = -1; if (selTrip >= 0) showCard(selTrip); return; }
+  if (pos(pats[trips[4 * i + 1]], profs[trips[4 * i + 2]], simT - st, tmp)) map.jumpTo({ center: toLL(tmp[0], tmp[1]) });
+}
+map.on("click", (e) => {
+  if (!D) return;
+  const px = e.point.x * dpr, py = e.point.y * dpr;
+  let best = -1, bd = Math.max(18 * dpr, 6 * dpr * map.getZoom() / 2) ** 2;
+  for (let h = 0; h < heads.length; h += HS) {
+    const d = (heads[h] - px) ** 2 + (heads[h + 1] - py) ** 2;
+    if (d < bd) { bd = d; best = heads[h + 4]; }
+  }
+  best >= 0 ? showCard(best) : hideCard();
+});
+map.on("dragstart", () => { if (followTrip >= 0) { followTrip = -1; if (selTrip >= 0) showCard(selTrip); } });
+
+// ================================================================== misc controls
+function toast(msg) {
+  const el = $("toast"); el.textContent = msg; el.classList.remove("hidden"); el.style.opacity = 1;
+  clearTimeout(toast.t); toast.t = setTimeout(() => { el.style.opacity = 0; setTimeout(() => el.classList.add("hidden"), 300); }, 2200);
+}
+async function share() {
+  const url = location.href;
+  try { await navigator.clipboard.writeText(url); toast(t().copied); } catch (e) { toast(t().copyFail + url); }
+}
+function initControls() {
+  slider.addEventListener("input", () => { simT = +slider.value; });
+  slider.addEventListener("pointerdown", () => setPlaying(false));
+  $("play").onclick = () => setPlaying(!playing);
+  const box = $("speeds");
+  for (const [v, label] of SPEEDS) {
+    const b = document.createElement("button"); b.textContent = label; b.className = v === speed ? "on" : "";
+    b.onclick = () => { speed = v; [...box.children].forEach((x) => x.classList.toggle("on", x === b)); };
+    box.appendChild(b);
+  }
+  addEventListener("keydown", (e) => {
+    if (e.target.tagName === "INPUT") return;
+    if (e.code === "Space" && D) { e.preventDefault(); setPlaying(!playing); }
+    if (e.key === "f" && D) openPanel("filters");
+    if (e.key === "m") openPanel("map");
+    if (e.key === "Escape") { hideCard(); $("about").classList.add("hidden"); if (panelTab) openPanel(panelTab); }
+  });
+  $("back").onclick = () => { location.hash = ""; closeCity(); };
+  $("btnFilters").onclick = () => openPanel("filters");
+  $("btnMap").onclick = () => openPanel(D ? (panelTab === "display" ? "display" : "map") : "map");
+  $("btnShare").onclick = share;
+  $("lang").onclick = () => { LANG = LANG === "en" ? "ur" : "en"; store.set("lang", LANG); applyLang(); };
+  $("aboutBtn").onclick = openAbout;
+  document.addEventListener("click", (e) => { if (e.target.closest("[data-about]")) openAbout(); });
+  $("about").onclick = (e) => { if (e.target.id === "about") $("about").classList.add("hidden"); };
+}
+function openAbout() {
+  $("aboutBox").innerHTML = ABOUT;
+  $("about").classList.remove("hidden");
+  $("aboutClose").onclick = () => $("about").classList.add("hidden");
+}
+
+function applyLang() {
+  const L = t();
+  document.body.classList.toggle("ur", LANG === "ur");
+  document.documentElement.lang = LANG;
+  $("lang").textContent = L.lang;
+  $("aboutBtn").innerHTML = `<span class="t">${L.about}</span>`;
+  $("btnShare").innerHTML = `<span class="t">${L.share}</span>`;
+  $("btnMap").innerHTML = `<span class="t">${L.map}</span><span class="k">M</span>`;
+  $("back").innerHTML = `<span class="t">${L.back}</span>`;
+  $("byLbl").textContent = L.by;
+  $("q").placeholder = L.search; $("loading").textContent = L.loading;
+  $("note").innerHTML = L.note;
+  setCredit();
+  if (D) {
+    $("title").textContent = LANG === "ur" ? D.city_ur || D.city : D.city;
+    $("subtitle").textContent = L.subCity(D.province);
+    applyFilters(false); setLegend(); if (selTrip >= 0) showCard(selTrip);
+  } else {
+    $("title").innerHTML = L.title; $("subtitle").textContent = L.sub;
+    $("count").textContent = CITIES.length ? L.cities(CITIES.length) : "";
+  }
+  renderPanel();
+  labelMarkers();
+}
+
+// ================================================================== search
+function initSearch() {
+  const q = $("q"), hits = $("hits");
+  let list = [], sel = 0;
+  const norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const render = () => {
+    const v = norm(q.value.trim());
+    list = v ? CITIES.filter((c) => norm(c.name).includes(v) || (c.name_ur || "").includes(q.value.trim())) : [...CITIES];
+    sel = 0;
+    hits.innerHTML = list.length ? list.map((c, i) =>
+      `<div data-k="${c.key}" class="${i === sel ? "sel" : ""}">${esc(LANG === "ur" ? c.name_ur : c.name)}<span>${c.trips.toLocaleString("en")} ${t().trips}</span></div>`).join("")
+      : `<div>${t().none}</div>`;
+    hits.classList.remove("hidden");
+  };
+  const pick = (key) => { hits.classList.add("hidden"); q.value = ""; q.blur(); if (key) openCity(key); };
+  q.addEventListener("focus", render);
+  q.addEventListener("input", render);
+  q.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault(); sel = (sel + (e.key === "ArrowDown" ? 1 : -1) + list.length) % list.length;
+      [...hits.children].forEach((d, i) => d.classList.toggle("sel", i === sel));
+    } else if (e.key === "Enter") pick(list[sel] && list[sel].key);
+    else if (e.key === "Escape") pick(null);
+  });
+  hits.addEventListener("mousedown", (e) => { const d = e.target.closest("[data-k]"); if (d) pick(d.dataset.k); });
+  q.addEventListener("blur", () => setTimeout(() => hits.classList.add("hidden"), 150));
+}
+
+// ================================================================== city <-> landing
+function netBounds() { // frame the busiest 96% of the network so one long outlying route doesn't zoom out
+  const xs = [], ys = [];
+  for (const s of shapes) for (let i = 0; i < s.x.length; i++) { xs.push(s.x[i]); ys.push(s.y[i]); }
+  xs.sort((a, b) => a - b); ys.sort((a, b) => a - b);
+  const q = (a, f) => a[Math.min(a.length - 1, Math.floor(f * a.length))];
+  return [toLL(q(xs, 0.02), q(ys, 0.02)), toLL(q(xs, 0.98), q(ys, 0.98))];
+}
+
+async function openCity(key) {
+  const meta = CITIES.find((c) => c.key === key);
+  if (!meta) return;
+  const seq = ++loadSeq;
+  hideCard();
+  map.flyTo({ center: meta.center, zoom: 10.5, duration: 1400 });
+  $("loading").classList.toggle("hidden", !!cache[key]);
+  let d;
+  try { d = cache[key] || (cache[key] = await fetch(`data/${key}.json`).then((r) => r.json())); }
+  catch (e) { $("loading").textContent = "Could not load this city."; return; }
+  if (seq !== loadSeq) return;
+  D = d; cityKey = key; chartBase = null; routeQuery = "";
+  F.modeOff.clear(); F.sysOff.clear(); F.conf = "all"; F.only.clear();
+  decode(d); applyFilters(false);
+  map.getSource("roads").setData({ type: "FeatureCollection", features: [] });
+  loadRoads(key);
+  setNetwork(); buildSprites(); setLegend();
+  map.fitBounds(netBounds(), { padding: { top: 150, bottom: 170, left: 30, right: innerWidth > 760 ? 240 : 30 }, duration: 1200, maxZoom: 13 });
+  for (const [k, m] of Object.entries(markers)) m.el.classList.toggle("hidden", k === key);
+  slider.min = d.t0; slider.max = d.t1;
+  simT = Math.min(Math.max(simT, d.t0), d.t1);
+  for (const id of ["clock", "back", "player", "btnFilters"]) $(id).classList.remove("hidden");
+  $("legend").classList.toggle("hidden", !!panelTab);
+  $("search").classList.add("hidden");
+  $("loading").classList.add("hidden");
+  applyLang();
+  requestAnimationFrame(drawChart);
+  if (location.hash.slice(1) !== key) history.replaceState(null, "", "#" + key);
+  if (!openCity.hinted) { openCity.hinted = true; setTimeout(() => toast(t().zoomHint), 1600); }
+}
+
+function closeCity() {
+  loadSeq++; hideCard();
+  D = null; cityKey = null;
+  setNetwork();
+  map.getSource("roads").setData({ type: "FeatureCollection", features: [] });
+  if (panelTab && panelTab !== "map") openPanel(panelTab);
+  for (const m of Object.values(markers)) m.el.classList.remove("hidden");
+  for (const id of ["clock", "back", "legend", "player", "btnFilters"]) $(id).classList.add("hidden");
+  $("search").classList.remove("hidden");
+  applyLang();
+  map.flyTo({ ...WORLD(), duration: 1400 });
+}
+
+// ================================================================== boot
+addEventListener("resize", () => { resize(); setCredit(); });
+map.on("load", async () => {
+  resize();
+  setCredit();
+  const [cities, pk] = await Promise.all([fetch("data/cities.json").then((r) => r.json()),
+    fetch("data/pakistan.json").then((r) => r.json()).catch(() => null)]);
+  CITIES = cities;
+  if (pk) map.getSource("pk").setData(pk);
+  addMarkers(); initControls(); initSearch(); applyLang();
+  setBasemap(bmKey, false);
+  const fromHash = () => { const k = location.hash.slice(1); if (k && k !== cityKey) openCity(k); else if (!k && cityKey) closeCity(); };
+  addEventListener("hashchange", fromHash); fromHash();
+  requestAnimationFrame(tick);
+});
+</script>
+</body>
+</html>
