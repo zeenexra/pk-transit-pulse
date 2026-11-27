@@ -27,23 +27,34 @@
   .maplibregl-marker { position: absolute; left: 0; top: 0; will-change: transform; }
 
   /* ---------- header */
-  #head { position: absolute; top: 16px; left: 16px; pointer-events: none;
-    text-shadow: 0 1px 12px rgba(0,0,0,0.95); max-width: min(520px, calc(100% - 32px)); z-index: 3; }
-  #head h1 { margin: 0; font-size: clamp(26px, 4vw, 44px); font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; }
+  #head { position: absolute; top: 12px; left: 12px; z-index: 4; max-width: min(660px, calc(100% - 300px));
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .hrow { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  #head h1 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.25;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .icb { width: 26px; height: 26px; padding: 0; flex: none; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; background: transparent; border-radius: 7px; color: var(--dim); }
+  #chips { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+  #chips button { padding: 3px 9px; font-size: 12px; border-radius: 7px; background: transparent; }
+  #chips button.on { border-color: #FFB547; color: #FFB547; background: rgba(255,181,71,0.1); }
+  body.hcol #head .sub, body.hcol #search, body.hcol .row-btns, body.hcol #chips, body.hcol #svc { display: none !important; }
   #head h1 .flag { color: var(--accent); }
   body.ur #head h1, body.ur #head .sub { font-family: "Noto Nastaliq Urdu", Inter, serif; line-height: 1.9; }
-  #head .sub { margin-top: 4px; font-size: clamp(13px, 1.5vw, 16px); color: var(--dim); }
-  #clock { margin-top: 8px; font-size: clamp(30px, 4vw, 44px); font-weight: 500; font-variant-numeric: tabular-nums; }
-  #clock small { font-size: 14px; color: var(--dim); font-weight: 400; margin-left: 6px; }
-  #count { font-size: 14px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  #head .sub { margin-top: 2px; font-size: 12px; color: var(--dim); }
+  body.incity #head .sub { display: none; }
+  #clock { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; flex: none; }
+  #clock small { font-size: 11px; color: var(--dim); font-weight: 400; margin-left: 3px; }
+  #count { font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; flex: none; }
   #count b { color: var(--accent); font-weight: 600; }
   #svc { font-size: 13px; color: #E9B949; margin-top: 4px; pointer-events: auto; }
-  .livetag { display: inline-block; vertical-align: middle; margin-left: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+  .livetag { display: inline-block; vertical-align: middle; margin-left: 6px; font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
     color: #fff; background: #E5323F; border-radius: 4px; padding: 2px 6px; animation: blink 2s ease-in-out infinite; }
   @keyframes blink { 50% { opacity: 0.55; } }
   .speeds .livebtn.on { background: rgba(229,50,63,0.22); border-color: #E5323F; }
-  .row-btns { display: flex; gap: 6px; margin-top: 12px; pointer-events: auto; flex-wrap: wrap; }
-  #search { position: relative; pointer-events: auto; margin-top: 12px; width: min(300px, 100%); text-shadow: none; }
+  .row-btns { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+  .row-btns button { padding: 4px 9px; font-size: 12px; border-radius: 7px; }
+  #search { position: relative; margin-top: 8px; width: min(300px, 100%); }
   input[type=search], input[type=text], input[type=password] { width: 100%; font: inherit; font-size: 14px; color: var(--ink);
     background: rgba(255,255,255,0.05); border: 1px solid var(--line); border-radius: 9px; padding: 8px 11px; }
   #q { background: var(--panel); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); font-size: 15px; }
@@ -72,18 +83,23 @@
   #slider { flex: 1; min-width: 0; accent-color: var(--accent); height: 28px; }
   .speeds { display: flex; gap: 4px; flex: none; }
   .speeds button { padding: 6px 8px; font-size: 12px; background: transparent; }
-  #chart { display: block; width: 100%; height: 54px; margin-top: 6px; cursor: pointer; }
+  #chart { display: block; width: 100%; height: 46px; margin-top: 6px; cursor: pointer; }
+  body.bcol #chart, body.bcol #note { display: none !important; }
+  .bar { padding: 8px 10px !important; }
   #note { pointer-events: auto; font-size: 12px; color: var(--dim); line-height: 1.45;
     background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
   .linkish { color: var(--accent); cursor: pointer; text-decoration: underline; background: none; border: 0; padding: 0; font-size: inherit; backdrop-filter: none; }
 
   /* ---------- legend (live counts) */
-  #legend { position: absolute; right: 16px; top: 16px; background: var(--panel); border: 1px solid var(--line);
-    border-radius: 12px; padding: 10px 12px; font-size: 13px; min-width: 200px; z-index: 3;
+  #legend { position: absolute; right: 12px; top: 12px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 8px 10px; font-size: 12px; width: 282px; z-index: 3; max-height: calc(100% - var(--foot) - var(--ctlh, 150px) - 30px); overflow-y: auto;
     backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
-  #legend .title { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; display: flex; justify-content: space-between; }
-  #legend label { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 3px 0; user-select: none; }
-  #legend label.off { opacity: 0.35; }
+  #legend .title { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; display: flex; justify-content: space-between; align-items: center; }
+  #legend .grp { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 6px 0 2px; font-weight: 600; font-size: 12.5px; user-select: none; }
+  #legend .grp.off, #legend .item.off { opacity: 0.35; }
+  #legend .item { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 2px 0 2px 18px; color: #cfd7d3; user-select: none; }
+  #legend .item b { width: 16px; height: 4px; border-radius: 2px; flex: none; }
+  body.lcol #legend .grp, body.lcol #legend .item { display: none; }
   #legend i, .chip i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; box-shadow: 0 0 7px currentColor; flex: none; }
   #legend .n { margin-left: auto; color: var(--ink); font-variant-numeric: tabular-nums; font-size: 12px; padding-left: 12px; }
 
@@ -124,7 +140,7 @@
   input[type=range] { accent-color: var(--accent); }
 
   /* ---------- vehicle card */
-  #card { position: absolute; right: 16px; bottom: calc(var(--foot) + 12px); width: min(340px, calc(100% - 32px)); z-index: 5;
+  #card { position: absolute; right: 12px; bottom: calc(var(--foot) + var(--ctlh, 120px) + 20px); width: min(340px, calc(100% - 32px)); z-index: 5;
     background: rgba(12,15,14,0.94); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; font-size: 13px; line-height: 1.5;
     backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
   #card .rid { font-size: 22px; font-weight: 700; }
@@ -140,19 +156,26 @@
 
   /* ---------- landing markers */
   .city { display: flex; align-items: center; gap: 8px; cursor: pointer; transform: translateX(7px); }
-  .city .pin { width: 13px; height: 13px; border-radius: 50%; background: var(--accent); flex: none;
-    box-shadow: 0 0 0 4px rgba(34,208,122,0.2), 0 0 18px rgba(34,208,122,0.8); animation: pulse 2.4s ease-in-out infinite; }
+  .city .pin { width: 18px; height: 18px; border-radius: 50%; background: #FFC857; border: 2.5px solid #0b100e; flex: none;
+    box-shadow: 0 0 0 3px rgba(255,200,87,0.35), 0 0 16px rgba(255,200,87,0.75); animation: pulse 2.4s ease-in-out infinite; }
   .city .lbl { font-size: 14px; font-weight: 500; color: var(--ink); white-space: nowrap; text-shadow: 0 1px 6px #000, 0 0 2px #000; }
   .city .lbl span { display: block; font-size: 11px; color: var(--dim); font-weight: 400; }
   body.ur .city .lbl { font-family: "Noto Nastaliq Urdu", serif; }
-  .city:hover .pin { background: #fff; }
-  .city.minor .pin { width: 8px; height: 8px; background: #2EE59D; box-shadow: 0 0 10px rgba(46,229,157,0.7); animation: none; }
+  .city:hover .pin { background: #ffe0a0; }
+  .city.minor .pin { width: 9px; height: 9px; background: rgba(11,16,14,0.85); border: 2px solid #e8eeeb; box-shadow: 0 0 6px rgba(232,238,235,0.35); animation: none; }
+  .city.minor:hover .pin { background: #e8eeeb; }
+  .city.minor .lbl { color: #b4beb9; }
   .city.minor .lbl { display: none; font-size: 12px; }
   body.zoomed .city.minor .lbl, .city.minor:hover .lbl { display: block; }
   .city.minor { transform: translateX(4px); }
+  .city.major { z-index: 2; }
+  .city .lbl.clash { visibility: hidden; }
+  .city .lbl.below { position: absolute; left: 50%; top: calc(100% + 2px); transform: translateX(-50%); text-align: center; }
+  .city .lbl.above { position: absolute; left: 50%; bottom: calc(100% + 2px); transform: translateX(-50%); text-align: center; }
+  .city .lbl.left { position: absolute; right: calc(100% + 8px); top: 50%; transform: translateY(-50%); text-align: right; }
   body.incity .city .lbl { display: none; }
   body.incity .city:hover .lbl { display: block; }
-  @keyframes pulse { 50% { box-shadow: 0 0 0 9px rgba(34,208,122,0.05), 0 0 26px rgba(34,208,122,0.9); } }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 9px rgba(255,200,87,0.05), 0 0 24px rgba(255,200,87,0.9); } }
 
   /* ---------- footer */
   #foot { position: absolute; left: 0; right: 0; bottom: 0; height: var(--foot); z-index: 9; display: flex; align-items: center; gap: 14px;
@@ -180,13 +203,17 @@
 
   @media (max-width: 760px) {
     :root { --foot: 50px; }
-    #head { left: 12px; top: 12px; }
-    #legend { top: auto; right: 10px; bottom: calc(var(--foot) + 158px); font-size: 12px; padding: 7px 9px; min-width: 0; }
-    #legend .title { display: none; }
+    #head { left: 8px; right: 8px; top: 8px; max-width: none; padding: 6px 8px; }
+    #head h1 { font-size: 15px; }
+    #clock { font-size: 15px; }
+    #count { display: none; }
+    #chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+    #chips button { flex: none; }
+    #legend { top: auto; right: 8px; bottom: calc(var(--foot) + var(--ctlh, 120px) + 16px); width: 220px; max-height: 38vh; }
     #ctl { left: 10px; right: 10px; bottom: calc(var(--foot) + 8px); }
     .speeds button { padding: 5px 6px; }
     #note { display: none; }
-    #card { bottom: calc(var(--foot) + 160px); right: 10px; }
+    #card { bottom: calc(var(--foot) + var(--ctlh, 120px) + 16px); right: 8px; left: 8px; width: auto; }
     #panel { left: 8px; right: 8px; width: auto; top: auto; bottom: calc(var(--foot) + 8px); max-height: 66vh; }
     #foot { gap: 8px; padding: 0 10px; }
     #foot .by { display: none; }
@@ -204,10 +231,14 @@
 <canvas id="fx"></canvas>
 
 <div id="head">
-  <h1 id="title"></h1>
+  <div class="hrow">
+    <h1 id="title"></h1>
+    <div id="clock" class="hidden"></div>
+    <div id="count"></div>
+    <span style="flex:1"></span>
+    <button class="icb" id="hcol" aria-label="Collapse header">▴</button>
+  </div>
   <div class="sub" id="subtitle"></div>
-  <div id="clock" class="hidden"></div>
-  <div id="count"></div>
   <div id="svc" class="hidden"><span class="t" id="svcTxt"></span> <button class="linkish t" id="svcJump"></button></div>
   <div id="search"><input id="q" type="search" autocomplete="off"><div id="hits" class="hidden"></div></div>
   <div class="row-btns">
@@ -218,6 +249,7 @@
     <button id="btnShare"></button>
     <button id="aboutBtn"></button>
   </div>
+  <div id="chips"></div>
 </div>
 
 <div id="legend" class="hidden"></div>
@@ -231,6 +263,7 @@
       <button id="play" aria-label="Play or pause">❚❚</button>
       <input id="slider" type="range" min="0" max="1" step="1" aria-label="Time of day">
       <div class="speeds" id="speeds"></div>
+      <button class="icb" id="bcol" aria-label="Collapse timeline">▾</button>
     </div>
     <canvas id="chart" aria-label="Vehicles running through the day"></canvas>
   </div>
@@ -350,7 +383,9 @@ const BASEMAPS = {
   dark:      { en: "Dark + labels", ur: "ڈارک + نام", note: "Streets and place names", sw: "#262b29", tiles: CARTO("dark_all"), credit: "© CARTO, © OpenStreetMap contributors", bright: 1 },
   light:     { en: "Light", ur: "لائٹ", note: "Pale streets", sw: "#e8e8e4", tiles: CARTO("light_all"), credit: "© CARTO, © OpenStreetMap contributors", bright: 1, light: true },
   satellite: { en: "Satellite", ur: "سیٹلائٹ", note: "Esri World Imagery", sw: "#3d4a33", tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"], credit: "Imagery © Esri, Maxar, Earthstar Geographics", bright: 0.65, size: 256 },
-  google:    { en: "Google dark", ur: "گوگل ڈارک", note: "Needs your API key", sw: "#1d2420", google: true },
+  google:    { en: "Google dark", ur: "گوگل ڈارک", note: "Needs your API key", sw: "#1d2420", google: "roadmap" },
+  ghybrid:   { en: "Google satellite", ur: "گوگل سیٹلائٹ", note: "Satellite with roads and names", sw: "#3a4630",
+               tiles: [0, 1, 2, 3].map((n) => `https://mt${n}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}`), credit: "Imagery and map data © Google", bright: 0.7, size: 256 },
 };
 // Dark style for Google Map Tiles API roadmap tiles: near-black land, thin grey roads, quiet labels
 const GOOGLE_DARK = [
@@ -383,7 +418,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 let D = null, shapes, pats, profs, trips, tripEnd, tripStarts, patRoute, patMode, maxDur, cityKey = null, loadSeq = 0;
 let routeVis, patVis;
 const cache = {};
-const F = { modeOff: new Set(), sysOff: new Set(), conf: "all", only: new Set() }; // filters
+const F = { modeOff: new Set(), sysOff: new Set(), lineOff: new Set(), conf: "all", only: new Set() }; // filters
 const V = { lines: true, trails: true, glow: true, size: 1, style: "auto", stations: true, lights: true };                         // display
 
 function decode(d) {
@@ -466,15 +501,15 @@ const toLL = (x, y) => [x / R * 360 / TAU, (2 * Math.atan(Math.exp(y / R)) - Mat
 function applyFilters(redraw = true) {
   if (!D) return;
   D.routes.forEach((r, i) => {
-    routeVis[i] = !F.modeOff.has(r.mode) && !F.sysOff.has(r.system) && (F.conf === "all" || F.conf === r.conf)
+    routeVis[i] = !F.modeOff.has(r.mode) && !F.sysOff.has(r.system) && !F.lineOff.has(lineKey(r)) && (F.conf === "all" || F.conf === r.conf)
       && (F.only.size === 0 || F.only.has(i)) ? 1 : 0;
   });
   for (let p = 0; p < pats.length; p++) patVis[p] = routeVis[patRoute[p]];
   if (redraw) { setNetwork(); chartBase = null; setLegend(); if (panelTab) renderPanel(); }
   $("btnFilters").innerHTML = `<span class="t">${t().filters}</span>${filtersActive() ? '<span class="dot"></span>' : ""}<span class="k">F</span>`;
 }
-const filtersActive = () => F.modeOff.size || F.sysOff.size || F.conf !== "all" || F.only.size;
-function resetFilters() { F.modeOff.clear(); F.sysOff.clear(); F.conf = "all"; F.only.clear(); applyFilters(); }
+const filtersActive = () => F.modeOff.size || F.sysOff.size || F.lineOff.size || F.conf !== "all" || F.only.size;
+function resetFilters() { F.modeOff.clear(); F.sysOff.clear(); F.lineOff.clear(); F.conf = "all"; F.only.clear(); applyFilters(); }
 
 // ================================================================== map
 const map = new maplibregl.Map({
@@ -493,9 +528,9 @@ const map = new maplibregl.Map({
       { id: "pk-line", type: "line", source: "pk", paint: { "line-color": "#2f4a3c", "line-width": 1.2 } },
       { id: "hw", type: "line", source: "hw", layout: { "line-join": "round", "line-cap": "round" },
         paint: {
-          "line-color": ["case", ["==", ["get", "c"], "m"], "#4f7d66", "#4a524e"],
-          "line-width": ["interpolate", ["linear"], ["zoom"], 4, ["case", ["==", ["get", "c"], "m"], 1.4, 0.7], 8, ["case", ["==", ["get", "c"], "m"], 2.4, 1.3], 12, ["case", ["==", ["get", "c"], "m"], 2.2, 1.2]],
-          "line-opacity": ["interpolate", ["linear"], ["zoom"], 4, 0.9, 9, 0.75, 11, 0.3, 13, 0.12],
+          "line-color": ["case", ["==", ["get", "c"], "m"], "#3fd39a", "#b7a37e"],
+          "line-width": ["interpolate", ["linear"], ["zoom"], 4, ["case", ["==", ["get", "c"], "m"], 2, 1.1], 8, ["case", ["==", ["get", "c"], "m"], 3, 1.7], 12, ["case", ["==", ["get", "c"], "m"], 2.6, 1.4]],
+          "line-opacity": ["interpolate", ["linear"], ["zoom"], 4, 0.85, 9, 0.7, 11, 0.3, 13, 0.12],
         } },
       { id: "roads", type: "line", source: "roads", layout: { "line-join": "miter", "line-cap": "butt", "line-miter-limit": 2 },
         paint: {
@@ -522,9 +557,11 @@ const map = new maplibregl.Map({
 });
 map.touchZoomRotate.disableRotation();
 map.on("zoom", () => document.body.classList.toggle("zoomed", map.getZoom() >= 6.3));
+map.on("zoomend", () => requestAnimationFrame(declutter));
 
 // ---------- background maps
-let bmKey = store.get("basemap2", "streets"), bmCredit = "", bmState = "";
+const ONLINE_HOST = /github\.io$|^localhost$|^127\./.test(location.hostname);
+let bmKey = store.get("basemap4", ONLINE_HOST ? "ghybrid" : "streets"), bmCredit = "", bmState = "";
 function clearBasemap() {
   for (const id of ["base"]) { if (map.getLayer(id)) map.removeLayer(id); if (map.getSource(id)) map.removeSource(id); }
   $("gmark").classList.add("hidden");
@@ -553,7 +590,7 @@ function probe(url) { // can a tile actually load here? (blocked in some preview
   });
 }
 async function setBasemap(key, userAction) {
-  bmKey = key; store.set("basemap2", key); bmState = "";
+  bmKey = key; store.set("basemap4", key); bmState = "";
   const b = BASEMAPS[key];
   if (key === "none" || key === "streets") { noBasemap(); roadsVisible(key === "streets"); renderPanel(); return; }
   roadsVisible(false);
@@ -571,16 +608,20 @@ async function setGoogle(apiKey, userAction) {
   bmState = "loading"; renderPanel();
   let r;
   try {
+    const kind = BASEMAPS[bmKey].google;
+    const opts = { mapType: kind, language: LANG === "ur" ? "ur" : "en-US", region: "PK", scale: "scaleFactor2x", highDpi: true };
+    if (kind === "roadmap") opts.styles = GOOGLE_DARK;
+    else opts.layerTypes = ["layerRoadmap"];          // satellite with roads and place names on top (hybrid)
     r = await fetch(`https://tile.googleapis.com/v1/createSession?key=${encodeURIComponent(apiKey)}`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mapType: "roadmap", language: LANG === "ur" ? "ur" : "en-US", region: "PK", scale: "scaleFactor2x", highDpi: true, styles: GOOGLE_DARK }),
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(opts),
     });
   } catch (e) { bmState = "blocked"; noBasemap(); roadsVisible(true); renderPanel(); return; }  // never reached Google
   try {
     if (!r.ok) { let m = ""; try { m = (await r.json()).error.message; } catch (e2) {} throw new Error(m || "HTTP " + r.status); }
     gSession = (await r.json()).session;
-    if (bmKey !== "google") return;
-    addRaster([`https://tile.googleapis.com/v1/2dtiles/{z}/{x}/{y}?session=${gSession}&key=${encodeURIComponent(apiKey)}`], 256, 1, "Map data © Google", false);
+    if (!BASEMAPS[bmKey].google) return;
+    const sat = BASEMAPS[bmKey].google === "satellite";
+    addRaster([`https://tile.googleapis.com/v1/2dtiles/{z}/{x}/{y}?session=${gSession}&key=${encodeURIComponent(apiKey)}`], 256, sat ? 0.7 : 1, sat ? "Imagery and map data © Google" : "Map data © Google", false);
     $("gmark").classList.remove("hidden");
     bmState = "ok";
   } catch (e) { bmState = "gfail"; gErr = e.message; noBasemap(); roadsVisible(true); }
@@ -616,31 +657,53 @@ function decPoly(s) {
   }
   return out;
 }
+const HW_MAIN = new Set(["N-5", "M-1", "M-2", "M-3", "M-4", "M-5", "M-9", "M-14"]);
 function setHighways(rows) {
-  const feats = [], best = {};
+  const feats = [];
+  HW_LABELS = [];
   for (const [ref, c, p] of rows) {
     const coords = decPoly(p);
     feats.push({ type: "Feature", properties: { ref, c }, geometry: { type: "LineString", coordinates: coords } });
-    if (!/^[MN]-\d/.test(ref)) continue;
+    if (!HW_MAIN.has(ref)) continue;
     let len = 0; for (let i = 1; i < coords.length; i++) len += Math.hypot(coords[i][0] - coords[i - 1][0], coords[i][1] - coords[i - 1][1]);
-    if (!best[ref] || len > best[ref].len) best[ref] = { len, mid: coords[Math.floor(coords.length / 2)], c };
+    if (len < 0.12) continue;
+    const cands = [0.5, 0.3, 0.7, 0.15, 0.85].map((f) => coords[Math.floor(f * (coords.length - 1))])
+      .map((q) => [q[0] * TAU / 360 * R, R * Math.log(Math.tan(Math.PI / 4 + q[1] * Math.PI / 360))]);
+    HW_LABELS.push({ ref, c, len, cands });
   }
-  HW_LABELS = Object.entries(best).filter(([, b]) => b.len > 0.6).map(([ref, b]) => ({ ref, c: b.c, x: b.mid[0] * TAU / 360 * R, y: R * Math.log(Math.tan(Math.PI / 4 + b.mid[1] * Math.PI / 360)) }));
+  HW_LABELS.sort((a, b) => b.len - a.len);
   map.getSource("hw").setData({ type: "FeatureCollection", features: feats });
 }
+function uiRects() {
+  const out = [];
+  for (const id of ["head", "legend", "ctl", "panel", "card"]) {
+    const el = $(id); if (!el || el.classList.contains("hidden")) continue;
+    const r = el.getBoundingClientRect(); if (r.width) out.push([r.left * dpr, r.top * dpr, r.width * dpr, r.height * dpr]);
+  }
+  if (!D) for (const { c, el } of Object.values(markers)) {
+    if (el.classList.contains("hidden")) continue;
+    for (const e of [el, el.querySelector(".lbl")]) {
+      if (!e || e.classList.contains("clash")) continue;
+      const r = e.getBoundingClientRect(); if (r.width) out.push([r.left * dpr - 4, r.top * dpr - 4, r.width * dpr + 8, r.height * dpr + 8]);
+    }
+  }
+  return out;
+}
 function drawHighwayShields(k, cx, cy, hw, hh, z) {
-  if (!HW_LABELS.length || z > 8.5) return;
-  ctx.font = `700 ${10 * dpr}px Inter, Arial, sans-serif`; ctx.textBaseline = "middle"; ctx.textAlign = "center";
-  const boxes = [];
-  for (const L of HW_LABELS) {
-    const px = hw + (L.x - cx) * k, py = hh - (L.y - cy) * k;
-    if (px < 0 || py < 0 || px > fx.width || py > fx.height) continue;
-    const w = ctx.measureText(L.ref).width + 10 * dpr, h = 15 * dpr, bx = px - w / 2, by = py - h / 2;
-    if (boxes.some((b) => bx < b[0] + b[2] + 4 && bx + w + 4 > b[0] && by < b[1] + b[3] + 4 && by + h + 4 > b[1])) continue;
-    boxes.push([bx, by, w, h]);
-    ctx.fillStyle = L.c === "m" ? "#1f6b45" : "#2b2f2d"; ctx.strokeStyle = L.c === "m" ? "#7fd3a6" : "#8c958f"; ctx.lineWidth = 1 * dpr;
-    ctx.beginPath(); ctx.roundRect(bx, by, w, h, 3 * dpr); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = "#f2f5f3"; ctx.fillText(L.ref, px, py + 0.5 * dpr);
+  if (!HW_LABELS.length || z > 10) return;
+  ctx.font = `600 ${11 * dpr}px Inter, Arial, sans-serif`; ctx.textBaseline = "middle"; ctx.textAlign = "center";
+  ctx.lineJoin = "round";
+  const boxes = uiRects(), placed = [];
+  for (const L of HW_LABELS) for (const [qx, qy] of L.cands) {
+    const px = hw + (qx - cx) * k, py = hh - (qy - cy) * k;
+    if (px < 20 || py < 20 || px > fx.width - 20 || py > fx.height - 20) continue;
+    const w = ctx.measureText(L.ref).width + 6 * dpr, h = 14 * dpr, bx = px - w / 2, by = py - h / 2;
+    if (boxes.some((b) => bx < b[0] + b[2] && bx + w > b[0] && by < b[1] + b[3] && by + h > b[1])) continue;
+    if (placed.some((q) => q.ref === L.ref && Math.hypot(q.px - px, q.py - py) < 150 * dpr)) continue;
+    boxes.push([bx - 6, by - 6, w + 12, h + 12]); placed.push({ ref: L.ref, px, py });
+    ctx.strokeStyle = "rgba(5,8,7,0.92)"; ctx.lineWidth = 3.5 * dpr; ctx.strokeText(L.ref, px, py);
+    ctx.fillStyle = L.c === "m" ? "#8fe0b4" : "#d8ccb4"; ctx.fillText(L.ref, px, py);
+    break;
   }
   ctx.textAlign = "start";
 }
@@ -681,16 +744,46 @@ function addMarkers() {
   }
   labelMarkers();
 }
+function declutter() {
+  const list = Object.values(markers).filter(({ el }) => !el.classList.contains("hidden"))
+    .sort((a, b) => (b.c.major ? 1 : 0) - (a.c.major ? 1 : 0) || b.c.trips - a.c.trips);
+  // every major-city pin is reserved first, so no name is drawn over one
+  const boxes = list.filter(({ c }) => c.major).map(({ el }) => el.querySelector(".pin").getBoundingClientRect());
+  for (const { el } of list) {
+    const lb = el.querySelector(".lbl"); if (!lb) continue;
+    lb.classList.remove("clash", "left", "below", "above");
+    if (getComputedStyle(lb).display === "none") continue;
+    const pin = el.querySelector(".pin").getBoundingClientRect();
+    const hits = (r) => r.right > innerWidth - 4 || r.left < 4 || boxes.some((b) => r.left < b.right + 2 && r.right > b.left - 2 && r.top < b.bottom + 1 && r.bottom > b.top - 1);
+    let r = lb.getBoundingClientRect();
+    for (const pos of ["left", "above", "below"]) {
+      if (!hits(r)) break;
+      lb.classList.remove("left", "below", "above"); lb.classList.add(pos); r = lb.getBoundingClientRect();
+    }
+    if (hits(r)) { lb.classList.remove("left", "below", "above"); lb.classList.add("clash"); boxes.push(pin); continue; }
+    boxes.push(r, pin);
+  }
+  // a small city ring sitting under a major city's name is faded so the name reads cleanly
+  const majorLbl = list.filter(({ c, el }) => c.major && !el.querySelector(".lbl").classList.contains("clash")).map(({ el }) => el.querySelector(".lbl").getBoundingClientRect());
+  for (const { c, el } of list) {
+    if (c.major) continue;
+    const pr = el.querySelector(".pin").getBoundingClientRect();
+    el.style.opacity = majorLbl.some((b) => pr.left < b.right && pr.right > b.left && pr.top < b.bottom && pr.bottom > b.top) ? "0.25" : "";
+  }
+}
+map.on("moveend", () => declutter());
 function labelMarkers() {
   for (const { el, c } of Object.values(markers)) {
-    const name = LANG === "ur" ? c.name_ur || c.name : c.name;
+    const name = LANG === "ur" ? c.name_ur || c.name : (innerWidth < 600 && c.key === "islamabad-rawalpindi" ? "Islamabad–Rwp" : c.name);
     el.innerHTML = `<span class="pin"></span><span class="lbl">${esc(name)}<span>${c.trips.toLocaleString("en")} ${t().trips}</span></span>`;
   }
+  requestAnimationFrame(declutter);
 }
 
 // ================================================================== vehicles
 const fx = $("fx"), ctx = fx.getContext("2d");
-let dpr = 1, W = 0, H = 0, sprites = [], spriteR = 0, spriteKey = "", heads = [], liveBy = {}, liveAll = 0, live = 0;
+let dpr = 1, W = 0, H = 0, sprites = [], spriteR = 0, spriteKey = "", heads = [], liveBy = {}, liveByLine = {}, lineKeyOf = [], liveAll = 0, live = 0;
+const lineKey = (r) => (r.col || "") + "|" + (r.line || r.mode);
 const HS = 7; // stride of heads[]: px, py, colour, emphasis, trip, heading, mode index
 
 function resize() {
@@ -881,7 +974,7 @@ function draw() {
   const n = tripStarts.length;
   const lo = bisect(tripStarts, simT - maxDur), hi = bisect(tripStarts, simT);
   const paths = !real && V.trails ? D.colours.map(() => Array.from({ length: TRAIL }, () => new Path2D())) : null;
-  live = 0; liveAll = 0; liveBy = {};
+  live = 0; liveAll = 0; liveBy = {}; liveByLine = {};
   for (let i = lo; i <= hi && i < n; i++) {
     const st = tripStarts[i];
     if (st > simT || tripEnd[i] < simT) continue;
@@ -891,6 +984,7 @@ function draw() {
     const pat = pats[pi], prof = profs[trips[4 * i + 2]], mode = patMode[pi];
     if (!pos(pat, prof, simT - st, tmp, (VEH[mode].kind === "train" ? 20 : 6) * D.mscale)) continue;
     live++; liveBy[mode] = (liveBy[mode] || 0) + 1;
+    { const lk = lineKeyOf[patRoute[pi]]; liveByLine[lk] = (liveByLine[lk] || 0) + 1; }
     const offPx = LANE[mode] * pxm * EX[mode], sn = Math.sin(tmp[2]), cs = Math.cos(tmp[2]);
     let px = hw + (tmp[0] - cx) * k - sn * offPx, py = hh - (tmp[1] - cy) * k - cs * offPx;
     if (px < -400 || py < -400 || px > fx.width + 400 || py > fx.height + 400) continue;
@@ -1041,19 +1135,60 @@ function setLive(v) {
 function jumpTo(h) { setLive(false); simT = Math.min(Math.max(h * 3600, D.t0), D.t1); slider.value = Math.round(simT); }
 
 function setLegend() {
-  $("legend").innerHTML = `<div class="title t"><span>${t().liveNow}</span></div>` + D.legend.map(([m, en, ur, cols]) =>
-    `<label class="${F.modeOff.has(m) ? "off" : ""}" data-m="${m}">` +
-    `<i style="background:${cols[0]};color:${cols[0]}"></i><span class="t">${LANG === "ur" ? ur : en}</span><span class="n" data-n="${m}">0</span></label>`).join("");
-  $("legend").querySelectorAll("label").forEach((lb) => lb.onclick = (e) => {
-    e.preventDefault();
-    const m = lb.dataset.m;
-    F.modeOff.has(m) ? F.modeOff.delete(m) : F.modeOff.add(m);
-    applyFilters();
+  const ur = LANG === "ur", col = document.body.classList.contains("lcol");
+  const groups = D.groups || [];
+  let h = `<div class="title t"><span>${t().liveNow}</span><button class="icb" id="lcolBtn" aria-label="Collapse legend">${col ? "▾" : "▴"}</button></div>`;
+  for (const [gid, gen, gur, gcol, items] of groups) {
+    const keys = items.map(([c, en]) => c + "|" + en);
+    const allOff = keys.every((k) => F.lineOff.has(k));
+    h += `<div class="grp ${allOff ? "off" : ""}" data-g="${gid}"><i style="background:${gcol};color:${gcol}"></i><span class="t">${ur ? gur : gen}</span><span class="n" data-gn="${keys.join(";")}">0</span></div>`;
+    for (const [c, en, u] of items) {
+      const k = c + "|" + en;
+      h += `<div class="item ${F.lineOff.has(k) ? "off" : ""}" data-k="${k}"><b style="background:${c}"></b><span class="t">${esc(ur ? u || en : en)}</span><span class="n" data-ln="${k}">0</span></div>`;
+    }
+  }
+  $("legend").innerHTML = h;
+  $("lcolBtn").onclick = (e) => { e.stopPropagation(); document.body.classList.toggle("lcol"); setLegend(); };
+  $("legend").querySelectorAll(".item").forEach((el) => el.onclick = () => {
+    const k = el.dataset.k; F.lineOff.has(k) ? F.lineOff.delete(k) : F.lineOff.add(k); applyFilters();
+  });
+  $("legend").querySelectorAll(".grp").forEach((el) => el.onclick = () => {
+    const keys = el.querySelector("[data-gn]").dataset.gn.split(";");
+    const allOff = keys.every((k) => F.lineOff.has(k));
+    keys.forEach((k) => allOff ? F.lineOff.delete(k) : F.lineOff.add(k)); applyFilters();
   });
   updateLegendCounts();
 }
 function updateLegendCounts() {
-  $("legend").querySelectorAll("[data-n]").forEach((el) => el.textContent = (liveBy[el.dataset.n] || 0).toLocaleString("en"));
+  const L = $("legend");
+  L.querySelectorAll("[data-ln]").forEach((el) => el.textContent = (liveByLine[el.dataset.ln] || 0).toLocaleString("en"));
+  L.querySelectorAll("[data-gn]").forEach((el) => el.textContent = el.dataset.gn.split(";").reduce((a, k) => a + (liveByLine[k] || 0), 0).toLocaleString("en"));
+}
+// ---------- chips (city switcher) and collapse controls
+const CHIP_CITIES = ["lahore", "karachi", "islamabad-rawalpindi", "peshawar", "multan", "quetta", "faisalabad"];
+function renderChips() {
+  const ur = LANG === "ur", L = t();
+  const nm = (c) => c.key === "islamabad-rawalpindi" ? (ur ? "اسلام آباد/پنڈی" : "Isb–Rwp") : (ur ? c.name_ur || c.name : c.name);
+  const list = CHIP_CITIES.map((k) => CITIES.find((c) => c.key === k)).filter(Boolean);
+  const more = CITIES.length - list.length;
+  $("chips").innerHTML = `<button data-k="" class="${cityKey ? "" : "on"} t">${ur ? "تمام شہر" : "All cities"}</button>` +
+    list.map((c) => `<button data-k="${c.key}" class="${c.key === cityKey ? "on" : ""} t">${esc(nm(c))}</button>`).join("") +
+    (more > 0 ? `<button data-more="1" class="t">+${more} ${ur ? "مزید" : "more"}</button>` : "");
+  $("chips").querySelectorAll("button").forEach((b) => b.onclick = () => {
+    if (b.dataset.more) { $("search").classList.remove("hidden"); $("q").focus(); return; }
+    if (b.dataset.k) openCity(b.dataset.k); else { history.replaceState(null, "", location.pathname + location.search); closeCity(); }
+  });
+}
+function updateCtlH() {
+  const c = $("ctl"); document.documentElement.style.setProperty("--ctlh", (c ? c.offsetHeight : 120) + "px");
+}
+function initCollapse() {
+  $("hcol").onclick = () => { const on = document.body.classList.toggle("hcol"); $("hcol").textContent = on ? "▾" : "▴"; };
+  $("bcol").onclick = () => { const on = document.body.classList.toggle("bcol"); $("bcol").textContent = on ? "▴" : "▾"; updateCtlH(); requestAnimationFrame(drawChart); };
+  // everything starts folded so the map is clear; each panel opens with its arrow
+  document.body.classList.add("hcol", "lcol", "bcol");
+  $("hcol").textContent = "▾"; $("bcol").textContent = "▴";
+  updateCtlH();
 }
 
 // ================================================================== side panel
@@ -1103,7 +1238,7 @@ function renderPanel() {
     body = `<h4><span class="t">${L.basemap}</span></h4>
       <div class="bm">${Object.entries(BASEMAPS).map(([k, b]) => `<button data-bm="${k}" class="${bmKey === k ? "on" : ""}">
         <span class="sw" style="background:${b.sw}"></span><span class="t">${LANG === "ur" ? b.ur : b.en}</span><small>${b.note}</small></button>`).join("")}</div>
-      ${bmKey === "google" ? `<h4><span class="t">${L.gkey}</span></h4>
+      ${BASEMAPS[bmKey].google ? `<h4><span class="t">${L.gkey}</span></h4>
         <div class="row"><input type="password" id="gk" placeholder="AIza…" value="${esc(store.get("gkey", ""))}"><button id="gkSave" class="t">${L.save}</button></div>` : ""}
       <div id="bmMsg" class="muted t ${["blocked", "gfail"].includes(bmState) ? "err" : ""}">${msg}</div>`;
   } else if (panelTab === "display" && D) {
@@ -1266,6 +1401,8 @@ function applyLang() {
   }
   renderPanel();
   labelMarkers();
+  if (CITIES.length) renderChips();
+  updateCtlH();
 }
 
 // ================================================================== search
@@ -1317,17 +1454,20 @@ async function openCity(key) {
   catch (e) { $("loading").textContent = "Could not load this city."; return; }
   if (seq !== loadSeq) return;
   D = d; cityKey = key; chartBase = null; routeQuery = "";
-  F.modeOff.clear(); F.sysOff.clear(); F.conf = "all"; F.only.clear();
+  F.modeOff.clear(); F.sysOff.clear(); F.lineOff.clear(); F.conf = "all"; F.only.clear();
+  lineKeyOf = d.routes.map(lineKey);
   decode(d); applyFilters(false);
   map.getSource("roads").setData({ type: "FeatureCollection", features: [] });
   loadRoads(key);
   setNetwork(); buildSprites(); setLegend();
-  map.fitBounds(netBounds(), { padding: { top: 150, bottom: 170, left: 30, right: innerWidth > 760 ? 240 : 30 }, duration: 1200, maxZoom: 13 });
+  updateCtlH();
+  const hb = $("head").getBoundingClientRect().bottom, ch = $("ctl").offsetHeight || 120;
+  map.fitBounds(netBounds(), { padding: { top: Math.min(hb + 16, innerHeight * 0.3), bottom: Math.min(ch + 40, innerHeight * 0.35), left: 30, right: innerWidth > 760 ? 310 : 30 }, duration: 1200, maxZoom: 13 });
   for (const [k, m] of Object.entries(markers)) m.el.classList.toggle("hidden", k === key);
   document.body.classList.add("incity");
   slider.min = d.t0; slider.max = d.t1;
   if (liveMode) simT = nowPKT(); else simT = Math.min(Math.max(simT, d.t0), d.t1);
-  for (const id of ["clock", "back", "player", "btnFilters"]) $(id).classList.remove("hidden");
+  for (const id of ["clock", "player", "btnFilters"]) $(id).classList.remove("hidden");
   $("legend").classList.toggle("hidden", !!panelTab);
   $("search").classList.add("hidden");
   $("loading").classList.add("hidden");
@@ -1352,7 +1492,7 @@ function closeCity() {
 }
 
 // ================================================================== boot
-addEventListener("resize", () => { resize(); setCredit(); });
+addEventListener("resize", () => { resize(); setCredit(); updateCtlH(); });
 map.on("load", async () => {
   resize();
   setCredit();
@@ -1362,7 +1502,7 @@ map.on("load", async () => {
   if (hw) setHighways(hw);
   CITIES = cities;
   if (pk) map.getSource("pk").setData(pk);
-  addMarkers(); initControls(); initSearch(); applyLang();
+  addMarkers(); initControls(); initSearch(); initCollapse(); applyLang();
   setBasemap(bmKey, false);
   const fromHash = () => { const k = location.hash.slice(1); if (k && k !== cityKey) openCity(k); else if (!k && cityKey) closeCity(); };
   addEventListener("hashchange", fromHash); fromHash();
